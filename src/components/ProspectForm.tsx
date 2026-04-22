@@ -2,7 +2,6 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Plus, Trash2, Save, AlertTriangle } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import { formatCurrency, formatPercentage, unformatCurrency, unformatPercentage, formatNumberWithCommas, unformatNumber } from '../utils/formatting';
-import { supabase } from '../lib/supabase';
 import { useAuth } from '../contexts/AuthContext';
 import { callBayesianAPI, formatFormDataForBayesian, validateBayesianInput, BayesianPredictionInput } from '../utils/bayesianApi';
 
@@ -253,86 +252,8 @@ export default function ProspectForm() {
   };
 
   const checkForDuplicates = async () => {
-    try {
-      const estimatedMembers = getEstimatedMembers();
-      const effectiveMembers = eligibleMembers
-        ? parseInt(eligibleMembers)
-        : estimatedMembers ?? null;
-
-      const { data: existingProspects, error } = await supabase
-        .from('prospects')
-        .select('*, health_plans(*)')
-        .eq('prospect_name', prospectName)
-        .eq('prospect_industry', prospectIndustry);
-
-      if (error) throw error;
-
-      if (!existingProspects || existingProspects.length === 0) {
-        return false;
-      }
-
-      for (const existing of existingProspects) {
-        const existingHealthPlans = existing.health_plans || [];
-
-        if (existingHealthPlans.length !== healthPlans.length) {
-          continue;
-        }
-
-        const fieldsMatch =
-          existing.union_type === (unionType || null) &&
-          existing.eligible_employees === (eligibleEmployees ? parseInt(eligibleEmployees) : null) &&
-          existing.eligible_members === effectiveMembers &&
-          existing.consultant === (consultant || null) &&
-          existing.channel_partnership === (channelPartnership || null) &&
-          existing.healthplan_partnership === (healthplanPartnership || null) &&
-          existing.needs_cigna_slides === (needsCignaSlides === 'yes' ? true : needsCignaSlides === 'no' ? false : null) &&
-          existing.scenarios_count === (scenariosCount ? parseInt(scenariosCount) : null) &&
-          existing.rx_coverage_type === (rxCoverageType || null) &&
-          existing.egg_freezing_coverage === (eggFreezingCoverage || null) &&
-          existing.fertility_pepm === (fertilityPepm ? parseFloat(unformatCurrency(fertilityPepm)) : null) &&
-          existing.fertility_case_rate === (fertilityCaseRate ? parseFloat(unformatCurrency(fertilityCaseRate)) : null) &&
-          existing.implementation_fee === (implementationFee ? parseFloat(unformatCurrency(implementationFee)) : null) &&
-          existing.current_fertility_benefit === (currentFertilityBenefit || null) &&
-          existing.fertility_administrator === (fertilityAdministrator || null) &&
-          existing.combined_medical_rx_benefit === (combinedMedicalRxBenefit === 'yes' ? true : combinedMedicalRxBenefit === 'no' ? false : null) &&
-          existing.notes === (notes || null) &&
-          existing.due_date === (dueDate || null);
-
-        if (!fieldsMatch) {
-          continue;
-        }
-
-        const healthPlansMatch = healthPlans.every((plan, index) => {
-          const existingPlan = existingHealthPlans[index];
-          if (!existingPlan) return false;
-
-          return (
-            existingPlan.health_plan_name === plan.healthPlanName &&
-            existingPlan.deductible_individual === parseFloat(unformatCurrency(plan.deductibleIndividual)) &&
-            existingPlan.deductible_family === parseFloat(unformatCurrency(plan.deductibleFamily)) &&
-            existingPlan.deductible_type === plan.deductibleType &&
-            existingPlan.oop_individual === parseFloat(unformatCurrency(plan.oopIndividual)) &&
-            existingPlan.oop_family === parseFloat(unformatCurrency(plan.oopFamily)) &&
-            existingPlan.oop_type === plan.oopType &&
-            existingPlan.coinsurance_individual === parseFloat(unformatPercentage(plan.coinsuranceIndividual)) &&
-            existingPlan.coinsurance_family === parseFloat(unformatPercentage(plan.coinsuranceFamily)) &&
-            existingPlan.employee_distribution === parseFloat(distributionType === 'percentage' ? unformatPercentage(plan.employeeDistribution) : unformatNumber(plan.employeeDistribution)) &&
-            existingPlan.employee_distribution_type === distributionType &&
-            existingPlan.has_copays === (plan.hasCopays === 'yes') &&
-            existingPlan.copay_type === (plan.copayType || null)
-          );
-        });
-
-        if (healthPlansMatch) {
-          return true;
-        }
-      }
-
-      return false;
-    } catch (err) {
-      console.error('Error checking for duplicates:', err);
-      return false;
-    }
+    // Duplicate checking disabled
+    return false;
   };
 
   const formatSubmitError = (error: unknown): string => {
@@ -387,32 +308,8 @@ export default function ProspectForm() {
   };
 
     const uploadCensusCsvIfPresent = async (): Promise<string | null> => {
-      if (!censusFile) return null;
-
-      // Create a unique file path in the existing bucket folder
-      const safeProspect = (prospectName || 'prospect')
-        .toLowerCase()
-        .replace(/[^a-z0-9]+/g, '-')
-        .replace(/(^-|-$)/g, '');
-
-      const fileExt = censusFile.name.split('.').pop()?.toLowerCase() || 'csv';
-      const fileName = `${crypto.randomUUID()}.${fileExt}`;
-
-      // Example path: "toa-attachments/census/prospect-name/<uuid>.csv"
-      const filePath = `census/${safeProspect}/${fileName}`;
-
-      const { error } = await supabase.storage
-        .from('toa-attachments')
-        .upload(filePath, censusFile, {
-          contentType: 'text/csv',
-          upsert: false,
-        });
-
-      if (error) {
-        throw new Error(`CSV upload failed: ${error.message}`);
-      }
-
-      return filePath;
+      // CSV upload disabled
+      return null;
     };
 
 
@@ -502,15 +399,14 @@ export default function ProspectForm() {
         created_by: user?.id, // <-- Add user ID for created_by tracking
       };
 
-      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-toa-request`;
+      const apiUrl = `${import.meta.env.VITE_API_URL}/submit-toa-request`;
 
-      // Step 1: Submit form data to Edge Function (insert prospects & health_plans)
+      // Step 1: Submit form data to API (insert prospects & health_plans)
       setMessage({ type: 'info', text: 'Submitting form data...' });
       
       const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(formData),
@@ -575,12 +471,11 @@ export default function ProspectForm() {
         try {
           setMessage({ type: 'info', text: 'Saving predictions...' });
           
-          const bayesianApiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/insert-bayesian-output`;
+          const bayesianApiUrl = `${import.meta.env.VITE_API_URL}/insert-bayesian-output`;
           
           const bayesianInsertRes = await fetch(bayesianApiUrl, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
