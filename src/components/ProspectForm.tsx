@@ -980,73 +980,259 @@ export default function ProspectForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={labelClass}>
-                    Current Fertility Benefit Name/Type
+                    Does prospect currently offer fertility benefits?
                   </label>
-                  <input
-                    type="text"
+                  <select
                     value={currentFertilityBenefit}
                     onChange={(e) => setCurrentFertilityBenefit(e.target.value)}
                     className={inputClass}
-                    placeholder="e.g., Progyny, Legacy Plan, etc."
-                  />
+                  >
+                    <option value="">Select...</option>
+                    <option value="No benefit">No benefit</option>
+                    <option value="Standard benefits">Standard benefits</option>
+                    <option value="Fully insured">Fully insured</option>
+                    <option value="Non-standard benefit (cycle)">Non-standard benefit (cycle)</option>
+                  </select>
                 </div>
 
-                <div>
-                  <label className={labelClass}>
-                    Current Fertility Administrator
-                  </label>
-                  <input
-                    type="text"
-                    value={fertilityAdministrator}
-                    onChange={(e) => setFertilityAdministrator(e.target.value)}
-                    className={inputClass}
-                    placeholder="e.g., Progyny, Carrot, etc."
-                  />
-                </div>
+                {currentFertilityBenefit && currentFertilityBenefit !== 'No benefit' && (
+                  <div>
+                    <label className={labelClass}>
+                      Current Fertility Administrator
+                    </label>
+                    <input
+                      type="text"
+                      value={fertilityAdministrator}
+                      onChange={(e) => setFertilityAdministrator(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g., Progyny, Carrot, etc."
+                    />
+                  </div>
+                )}
+              </div>
 
-                <div>
-                  <label className={labelClass}>
-                    Current Benefit - PEPM
-                  </label>
-                  <input
-                    type="text"
-                    value={currentBenefitPepm ? formatCurrency(currentBenefitPepm) : ''}
-                    onChange={(e) => setCurrentBenefitPepm(unformatCurrency(e.target.value))}
-                    className={inputClass}
-                    placeholder="$0.00 per employee/month"
-                  />
-                </div>
+              {(currentFertilityBenefit === 'Standard benefits' || currentFertilityBenefit === 'Fully insured') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelClass}>
+                      Medical Lifetime Maximum
+                    </label>
+                    <input
+                      type="text"
+                      value={currentFertilityMedicalLimit}
+                      onChange={(e) => setCurrentFertilityMedicalLimit(e.target.value)}
+                      className={inputClass}
+                      placeholder="$0.00 or Unlimited"
+                    />
+                  </div>
 
-                <div>
-                  <label className={labelClass}>
-                    Current Benefit - Case Fee
-                  </label>
-                  <input
-                    type="text"
-                    value={currentBenefitCaseFee ? formatCurrency(currentBenefitCaseFee) : ''}
-                    onChange={(e) => setCurrentBenefitCaseFee(unformatCurrency(e.target.value))}
-                    className={inputClass}
-                    placeholder="$0.00 per case"
-                  />
-                </div>
+                  <div>
+                    <label className={labelClass}>
+                      Medical LTM Type
+                    </label>
+                    <select
+                      value={medicalLtmType}
+                      onChange={(e) => setMedicalLtmType(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Lifetime">Lifetime</option>
+                      <option value="Per-Year">Per-Year</option>
+                      <option value="Per-Treatment">Per-Treatment</option>
+                      <option value="Unlimited">Unlimited</option>
+                    </select>
+                  </div>
 
+                  <div>
+                    <label className={labelClass}>
+                      Rx Lifetime Maximum
+                    </label>
+                    <input
+                      type="text"
+                      value={currentFertilityRxLimit}
+                      onChange={(e) => setCurrentFertilityRxLimit(e.target.value)}
+                      className={inputClass}
+                      placeholder="$0.00 or Unlimited"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Rx LTM Type
+                    </label>
+                    <select
+                      value={rxLtmType}
+                      onChange={(e) => setRxLtmType(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Lifetime">Lifetime</option>
+                      <option value="Per-Year">Per-Year</option>
+                      <option value="Per-Treatment">Per-Treatment</option>
+                      <option value="Unlimited">Unlimited</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Current Elective Egg Freezing Coverage
+                    </label>
+                    <select
+                      value={currentElectiveEggFreezing}
+                      onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Covered">Covered</option>
+                      <option value="Not Covered">Not Covered</option>
+                      <option value="Partial">Partial</option>
+                      <option value="Unknown">Unknown</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Live Births (Last 12 Months)
+                    </label>
+                    <input
+                      type="text"
+                      value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
+                      onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
+                      className={inputClass}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Current Benefit - PEPM
+                    </label>
+                    <input
+                      type="text"
+                      value={currentBenefitPepm ? formatCurrency(currentBenefitPepm) : ''}
+                      onChange={(e) => setCurrentBenefitPepm(unformatCurrency(e.target.value))}
+                      className={inputClass}
+                      placeholder="$0.00 per employee/month"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Current Benefit - Case Fee
+                    </label>
+                    <input
+                      type="text"
+                      value={currentBenefitCaseFee ? formatCurrency(currentBenefitCaseFee) : ''}
+                      onChange={(e) => setCurrentBenefitCaseFee(unformatCurrency(e.target.value))}
+                      className={inputClass}
+                      placeholder="$0.00 per case"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {currentFertilityBenefit === 'Non-standard benefit (cycle)' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelClass}>
+                      Medical Benefit Details
+                    </label>
+                    <textarea
+                      value={medicalBenefitDetails}
+                      onChange={(e) => setMedicalBenefitDetails(e.target.value)}
+                      className={inputClass}
+                      rows={4}
+                      placeholder="Enter medical benefit details..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Rx Benefit Details
+                    </label>
+                    <textarea
+                      value={rxBenefitDetails}
+                      onChange={(e) => setRxBenefitDetails(e.target.value)}
+                      className={inputClass}
+                      rows={4}
+                      placeholder="Enter Rx benefit details..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Current Elective Egg Freezing Coverage
+                    </label>
+                    <select
+                      value={currentElectiveEggFreezing}
+                      onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Covered">Covered</option>
+                      <option value="Not Covered">Not Covered</option>
+                      <option value="Partial">Partial</option>
+                      <option value="Unknown">Unknown</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Live Births (Last 12 Months)
+                    </label>
+                    <input
+                      type="text"
+                      value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
+                      onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
+                      className={inputClass}
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Current Benefit - PEPM
+                    </label>
+                    <input
+                      type="text"
+                      value={currentBenefitPepm ? formatCurrency(currentBenefitPepm) : ''}
+                      onChange={(e) => setCurrentBenefitPepm(unformatCurrency(e.target.value))}
+                      className={inputClass}
+                      placeholder="$0.00 per employee/month"
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Current Benefit - Case Fee
+                    </label>
+                    <input
+                      type="text"
+                      value={currentBenefitCaseFee ? formatCurrency(currentBenefitCaseFee) : ''}
+                      onChange={(e) => setCurrentBenefitCaseFee(unformatCurrency(e.target.value))}
+                      className={inputClass}
+                      placeholder="$0.00 per case"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {currentFertilityBenefit === 'No benefit' && (
                 <div>
                   <label className={labelClass}>
-                    Current Elective Egg Freezing Coverage
+                    Would you like to include a no benefit column in the TOA?
                   </label>
                   <select
-                    value={currentElectiveEggFreezing}
-                    onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
+                    value={includeNoBenefitColumn}
+                    onChange={(e) => setIncludeNoBenefitColumn(e.target.value)}
                     className={inputClass}
                   >
                     <option value="">Select...</option>
-                    <option value="Covered">Covered</option>
-                    <option value="Not Covered">Not Covered</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Unknown">Unknown</option>
+                    <option value="yes">Yes</option>
+                    <option value="no">No</option>
                   </select>
                 </div>
-              </div>
+              )}
             </div>
           </div>
 
