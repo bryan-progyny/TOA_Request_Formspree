@@ -530,6 +530,7 @@ export default function ProspectForm() {
                     label="Prospect Name"
                     placeholder="Type prospect name..."
                     required
+                    theme={theme}
                   />
                 </div>
 
@@ -555,6 +556,7 @@ export default function ProspectForm() {
                     label="Prospect Industry"
                     placeholder="Type industry..."
                     required
+                    theme={theme}
                   />
                 </div>
 
