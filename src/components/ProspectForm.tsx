@@ -1128,6 +1128,39 @@ export default function ProspectForm() {
                       </div>
                     ))}
                   </div>
+
+                  <div className="mt-6 pt-6 border-t border-slate-200">
+                    <h3 className="text-lg font-semibold text-slate-800 mb-6">Smart Cycles Options Details</h3>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-slate-800 mb-2">
+                          Smart Cycles - Option 1
+                        </label>
+                        <input
+                          type="text"
+                          value={smartCyclesOption1}
+                          onChange={(e) => setSmartCyclesOption1(e.target.value)}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                          placeholder="Describe the Smart Cycles option..."
+                        />
+                      </div>
+
+                      {parseInt(scenariosCount) >= 2 && (
+                        <div>
+                          <label className="block text-sm font-semibold text-slate-800 mb-2">
+                            Smart Cycles - Option 2
+                          </label>
+                          <input
+                            type="text"
+                            value={smartCyclesOption2}
+                            onChange={(e) => setSmartCyclesOption2(e.target.value)}
+                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                            placeholder="Describe the Smart Cycles option..."
+                          />
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
             </div>
@@ -1400,41 +1433,6 @@ export default function ProspectForm() {
                     onChange={(e) => setSurrogacyFrequency(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
                     placeholder="e.g., Once per lifetime, per year, etc."
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Smart Cycles & Other Features Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Smart Cycles & Other Features</h2>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
-                    Smart Cycles - Option 1
-                  </label>
-                  <input
-                    type="text"
-                    value={smartCyclesOption1}
-                    onChange={(e) => setSmartCyclesOption1(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
-                    placeholder="Describe the Smart Cycles option..."
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
-                    Smart Cycles - Option 2
-                  </label>
-                  <input
-                    type="text"
-                    value={smartCyclesOption2}
-                    onChange={(e) => setSmartCyclesOption2(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
-                    placeholder="Describe the Smart Cycles option..."
                   />
                 </div>
               </div>
