@@ -457,6 +457,10 @@ export default function ProspectForm() {
       : 'bg-white border-slate-300 text-slate-900 hover:border-slate-400'
   }`;
 
+  const h3Class = `text-lg font-semibold mb-6 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
+  const h4Class = `text-sm font-semibold mb-4 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
+  const tableHeaderClass = `text-xs font-bold uppercase tracking-wide ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
+
   return (
     <div className={`min-h-screen transition-colors duration-300 ${
       theme === 'dark'
@@ -549,14 +553,14 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Account Link *
                   </label>
                   <input
                     type="text"
                     value={accountLink}
                     onChange={(e) => setAccountLink(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="Paste Salesforce account link"
                     required
                   />
@@ -574,13 +578,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Union Type
                   </label>
                   <select
                     value={unionType}
                     onChange={(e) => setUnionType(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select union type...</option>
                     <option value="AFL-CIO">AFL-CIO</option>
@@ -594,27 +598,27 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     # of Eligible Employees *
                   </label>
                   <input
                     type="text"
                     value={eligibleEmployees ? formatNumberWithCommas(eligibleEmployees) : ''}
                     onChange={(e) => setEligibleEmployees(unformatNumber(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="Enter number"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     # of Eligible Members
                   </label>
                   <input
                     type="text"
                     value={eligibleMembers ? formatNumberWithCommas(eligibleMembers) : ''}
                     onChange={(e) => setEligibleMembers(unformatNumber(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="Enter number"
                   />
                   {!eligibleMembers && getEstimatedMembers() !== null && (
@@ -625,13 +629,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Consultant
                   </label>
                   <select
                     value={consultant}
                     onChange={(e) => setConsultant(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="WTW">WTW</option>
@@ -642,13 +646,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Channel Partnership
                   </label>
                   <select
                     value={channelPartnership}
                     onChange={(e) => setChannelPartnership(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="CVS">CVS</option>
@@ -661,13 +665,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Health-plan Partnership
                   </label>
                   <select
                     value={healthplanPartnership}
                     onChange={(e) => setHealthplanPartnership(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="IBX">IBX</option>
@@ -686,13 +690,13 @@ export default function ProspectForm() {
 
                 {healthplanPartnership === 'Cigna' && (
                   <div>
-                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                    <label className={labelClass}>
                       Cigna branded slides? *
                     </label>
                     <select
                       value={needsCignaSlides}
                       onChange={(e) => setNeedsCignaSlides(e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      className={inputClass}
                     >
                       <option value="">Select...</option>
                       <option value="yes">Yes</option>
@@ -702,26 +706,26 @@ export default function ProspectForm() {
                 )}
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Due Date
                   </label>
                   <input
                     type="date"
                     value={dueDate}
                     onChange={(e) => handleDueDateChange(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   />
                 </div>
 
                 {showRushReason && (
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                    <label className={labelClass}>
                       Rush Reason
                     </label>
                     <textarea
                       value={rushReason}
                       onChange={(e) => setRushReason(e.target.value)}
-                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      className={inputClass}
                       rows={3}
                       placeholder="Explain the date change..."
                     />
@@ -735,7 +739,7 @@ export default function ProspectForm() {
           <div className={cardClass}>
             <h2 className={`${headingClass} mb-6`}>Health Plans</h2>
             <div className={`mb-6 p-4 rounded-lg transition-colors ${distributionError ? 'bg-yellow-100 border-2 border-yellow-400' : ''}`}>
-              <label className="block text-sm font-semibold text-slate-800 mb-2">
+              <label className={labelClass}>
                 Employee Distribution Type *
               </label>
               <div className="flex gap-4">
@@ -750,7 +754,7 @@ export default function ProspectForm() {
                     }}
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-slate-700 font-medium">Percentage (%)</span>
+                  <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Percentage (%)</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
                   <input
@@ -763,7 +767,7 @@ export default function ProspectForm() {
                     }}
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-slate-700 font-medium">Number of Employees</span>
+                  <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Number of Employees</span>
                 </label>
                 <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
                   <input
@@ -776,34 +780,34 @@ export default function ProspectForm() {
                     }}
                     className="w-4 h-4 text-blue-600"
                   />
-                  <span className="text-slate-700 font-medium">Unknown</span>
+                  <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Unknown</span>
                 </label>
               </div>
             </div>
 
-            <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-sm mb-4">
-              <table className="w-full border-collapse bg-white">
+            <div className={`overflow-x-auto border rounded-xl shadow-sm mb-4 ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'}`}>
+              <table className={`w-full border-collapse ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
                 <thead>
-                  <tr className="bg-gradient-to-r from-slate-50 to-slate-100">
-                    <th className="border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700 w-[50px]"></th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[150px]">Health Plan</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">Ded Indiv</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">Ded Family</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[100px]">Type</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">OOP Indiv</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">OOP Family</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[100px]">Type</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">Coin Indiv</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">Coin Family</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[100px]">Distribution</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[100px]">Has Copays?</th>
-                    <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[150px]">Copay Type</th>
+                  <tr className={`bg-gradient-to-r ${theme === 'dark' ? 'from-slate-700 to-slate-600' : 'from-slate-50 to-slate-100'}`}>
+                    <th className={`border px-3 py-2 text-center text-xs font-semibold w-[50px] ${theme === 'dark' ? 'border-slate-700 text-slate-200' : 'border-slate-300 text-slate-700'}`}></th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[150px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Health Plan</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Ded Indiv</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Ded Family</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Type</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>OOP Indiv</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>OOP Family</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Type</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Coin Indiv</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Coin Family</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Distribution</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Has Copays?</th>
+                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[150px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Copay Type</th>
                   </tr>
                 </thead>
                 <tbody>
                   {healthPlans.map((plan) => (
-                    <tr key={plan.id} className="hover:bg-slate-50">
-                      <td className="border border-slate-200 p-3 text-center">
+                    <tr key={plan.id} className={`${theme === 'dark' ? 'hover:bg-slate-700 border-slate-700' : 'hover:bg-slate-50 border-slate-200'}`}>
+                      <td className={`border p-3 text-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
                         {healthPlans.length > 1 && (
                           <button
                             type="button"
@@ -814,90 +818,90 @@ export default function ProspectForm() {
                           </button>
                         )}
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={plan.healthPlanName}
                           onChange={(e) => updateHealthPlan(plan.id, 'healthPlanName', e.target.value)}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           placeholder="Plan name"
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={plan.deductibleIndividual ? formatCurrency(plan.deductibleIndividual) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'deductibleIndividual', unformatCurrency(e.target.value))}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           placeholder="$0"
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={plan.deductibleFamily ? formatCurrency(plan.deductibleFamily) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'deductibleFamily', unformatCurrency(e.target.value))}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           placeholder="$0"
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <select
                           value={plan.deductibleType}
                           onChange={(e) => updateHealthPlan(plan.id, 'deductibleType', e.target.value)}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                         >
                           <option value="embedded">Embedded</option>
                           <option value="aggregate">Aggregate</option>
                         </select>
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={plan.oopIndividual ? formatCurrency(plan.oopIndividual) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'oopIndividual', unformatCurrency(e.target.value))}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           placeholder="$0"
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={plan.oopFamily ? formatCurrency(plan.oopFamily) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'oopFamily', unformatCurrency(e.target.value))}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           placeholder="$0"
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <select
                           value={plan.oopType}
                           onChange={(e) => updateHealthPlan(plan.id, 'oopType', e.target.value)}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                         >
                           <option value="embedded">Embedded</option>
                           <option value="aggregate">Aggregate</option>
                         </select>
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={plan.coinsuranceIndividual ? formatPercentage(plan.coinsuranceIndividual) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceIndividual', unformatPercentage(e.target.value))}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           placeholder="0%"
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={plan.coinsuranceFamily ? formatPercentage(plan.coinsuranceFamily) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceFamily', unformatPercentage(e.target.value))}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           placeholder="0%"
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <input
                           type="text"
                           value={
@@ -927,21 +931,21 @@ export default function ProspectForm() {
                           placeholder={distributionType === 'percentage' ? '0%' : '0'}
                         />
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <select
                           value={plan.hasCopays}
                           onChange={(e) => updateHealthPlan(plan.id, 'hasCopays', e.target.value)}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                         >
                           <option value="no">No</option>
                           <option value="yes">Yes</option>
                         </select>
                       </td>
-                      <td className="border border-slate-300 p-0">
+                      <td className={order p-0 }>
                         <select
                           value={plan.copayType}
                           onChange={(e) => updateHealthPlan(plan.id, 'copayType', e.target.value)}
-                          className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
                           disabled={plan.hasCopays === 'no'}
                         >
                           <option value="">Select...</option>
@@ -975,65 +979,65 @@ export default function ProspectForm() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Current Fertility Benefit Name/Type
                   </label>
                   <input
                     type="text"
                     value={currentFertilityBenefit}
                     onChange={(e) => setCurrentFertilityBenefit(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="e.g., Progyny, Legacy Plan, etc."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Current Fertility Administrator
                   </label>
                   <input
                     type="text"
                     value={fertilityAdministrator}
                     onChange={(e) => setFertilityAdministrator(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="e.g., Progyny, Carrot, etc."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Current Benefit - PEPM
                   </label>
                   <input
                     type="text"
                     value={currentBenefitPepm ? formatCurrency(currentBenefitPepm) : ''}
                     onChange={(e) => setCurrentBenefitPepm(unformatCurrency(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="$0.00 per employee/month"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Current Benefit - Case Fee
                   </label>
                   <input
                     type="text"
                     value={currentBenefitCaseFee ? formatCurrency(currentBenefitCaseFee) : ''}
                     onChange={(e) => setCurrentBenefitCaseFee(unformatCurrency(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="$0.00 per case"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Current Elective Egg Freezing Coverage
                   </label>
                   <select
                     value={currentElectiveEggFreezing}
                     onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="Covered">Covered</option>
@@ -1053,13 +1057,13 @@ export default function ProspectForm() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Fee Type
                   </label>
                   <select
                     value={feeType}
                     onChange={(e) => setFeeType(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="PEPM">PEPM</option>
@@ -1069,40 +1073,40 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Fertility PEPM
                   </label>
                   <input
                     type="text"
                     value={fertilityPepm ? formatCurrency(fertilityPepm) : ''}
                     onChange={(e) => setFertilityPepm(unformatCurrency(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="$0.00 per employee/month"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Fertility Case Rate
                   </label>
                   <input
                     type="text"
                     value={fertilityCaseRate ? formatCurrency(fertilityCaseRate) : ''}
                     onChange={(e) => setFertilityCaseRate(unformatCurrency(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="$0.00 per case"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Implementation Fee
                   </label>
                   <input
                     type="text"
                     value={implementationFee ? formatCurrency(implementationFee) : ''}
                     onChange={(e) => setImplementationFee(unformatCurrency(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="$0.00"
                   />
                 </div>
@@ -1117,13 +1121,13 @@ export default function ProspectForm() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Number of Scenarios
                   </label>
                   <select
                     value={scenariosCount}
                     onChange={(e) => setScenariosCount(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="1">1</option>
@@ -1132,13 +1136,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Include "No Benefit" Column
                   </label>
                   <select
                     value={includeNoBenefitColumn}
                     onChange={(e) => setIncludeNoBenefitColumn(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="yes">Yes</option>
@@ -1147,13 +1151,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Include Dollar Max Column
                   </label>
                   <select
                     value={dollarMaxColumn}
                     onChange={(e) => setDollarMaxColumn(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="yes">Yes</option>
@@ -1162,14 +1166,14 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Live Births (12 months)
                   </label>
                   <input
                     type="text"
                     value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
                     onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="Enter number"
                   />
                 </div>
@@ -1177,32 +1181,32 @@ export default function ProspectForm() {
 
               {scenariosCount && parseInt(scenariosCount) > 0 && (
                 <div className="mt-8 pt-8 border-t border-slate-200">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-6">Smart Cycles Options</h3>
+                  <h3 className={h3Class}>Smart Cycles Options</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                      <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      <label className={labelClass}>
                         Smart Cycles - Option 1
                       </label>
                       <input
                         type="text"
                         value={smartCyclesOption1}
                         onChange={(e) => setSmartCyclesOption1(e.target.value)}
-                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                        className={inputClass}
                         placeholder="Describe the Smart Cycles option..."
                       />
                     </div>
 
                     {parseInt(scenariosCount) >= 2 && (
                       <div>
-                        <label className="block text-sm font-semibold text-slate-800 mb-2">
+                        <label className={labelClass}>
                           Smart Cycles - Option 2
                         </label>
                         <input
                           type="text"
                           value={smartCyclesOption2}
                           onChange={(e) => setSmartCyclesOption2(e.target.value)}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                          className={inputClass}
                           placeholder="Describe the Smart Cycles option..."
                         />
                       </div>
@@ -1210,17 +1214,17 @@ export default function ProspectForm() {
                   </div>
 
                   <div className="pt-6 border-t border-slate-200">
-                    <h4 className="text-sm font-semibold text-slate-800 mb-4">Scenario Selections</h4>
+                    <h4 className={h4Class}>Scenario Selections</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {Array.from({ length: parseInt(scenariosCount) }).map((_, index) => (
                         <div key={index}>
-                          <label className="block text-sm font-semibold text-slate-800 mb-2">
+                          <label className={labelClass}>
                             Scenario {index + 1} - Smart Cycles Option
                           </label>
                           <select
                             value={scenarioSmartCycles[index] || ''}
                             onChange={(e) => setScenarioSmartCycles({ ...scenarioSmartCycles, [index]: e.target.value })}
-                            className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                            className={inputClass}
                           >
                             <option value="">Select...</option>
                             <option value="Option 1">Option 1</option>
@@ -1244,13 +1248,13 @@ export default function ProspectForm() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Combined Medical & Rx Benefit?
                   </label>
                   <select
                     value={combinedMedicalRxBenefit}
                     onChange={(e) => setCombinedMedicalRxBenefit(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="yes">Yes</option>
@@ -1259,13 +1263,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Rx Coverage Type
                   </label>
                   <select
                     value={rxCoverageType}
                     onChange={(e) => setRxCoverageType(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="Covered">Covered</option>
@@ -1275,26 +1279,26 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Current Fertility Medical Limit
                   </label>
                   <input
                     type="text"
                     value={currentFertilityMedicalLimit ? formatCurrency(currentFertilityMedicalLimit) : ''}
                     onChange={(e) => setCurrentFertilityMedicalLimit(unformatCurrency(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="$0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Medical LTM Type
                   </label>
                   <select
                     value={medicalLtmType}
                     onChange={(e) => setMedicalLtmType(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="Lifetime">Lifetime</option>
@@ -1304,26 +1308,26 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Current Fertility Rx Limit
                   </label>
                   <input
                     type="text"
                     value={currentFertilityRxLimit ? formatCurrency(currentFertilityRxLimit) : ''}
                     onChange={(e) => setCurrentFertilityRxLimit(unformatCurrency(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="$0.00"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Rx LTM Type
                   </label>
                   <select
                     value={rxLtmType}
                     onChange={(e) => setRxLtmType(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="Lifetime">Lifetime</option>
@@ -1335,26 +1339,26 @@ export default function ProspectForm() {
 
               <div className="grid grid-cols-1 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Medical Benefit Details
                   </label>
                   <textarea
                     value={medicalBenefitDetails}
                     onChange={(e) => setMedicalBenefitDetails(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     rows={3}
                     placeholder="Describe any specific medical benefit details..."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Rx Benefit Details
                   </label>
                   <textarea
                     value={rxBenefitDetails}
                     onChange={(e) => setRxBenefitDetails(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     rows={3}
                     placeholder="Describe any specific Rx benefit details..."
                   />
@@ -1370,13 +1374,13 @@ export default function ProspectForm() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Egg Freezing Coverage Type
                   </label>
                   <select
                     value={eggFreezingCoverage}
                     onChange={(e) => setEggFreezingCoverage(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="Covered">Covered</option>
@@ -1387,40 +1391,40 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Female Employees (40-60 years)
                   </label>
                   <input
                     type="text"
                     value={femaleEmployees4060 ? formatNumberWithCommas(femaleEmployees4060) : ''}
                     onChange={(e) => setFemaleEmployees4060(unformatNumber(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="Enter number"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Subscribers/Dependents Under 12
                   </label>
                   <input
                     type="text"
                     value={subscribersDependentsUnder12 ? formatNumberWithCommas(subscribersDependentsUnder12) : ''}
                     onChange={(e) => setSubscribersDependentsUnder12(unformatNumber(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="Enter number"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Live Births (12 months - Expanded)
                   </label>
                   <input
                     type="text"
                     value={liveBirths12moExpanded ? formatNumberWithCommas(liveBirths12moExpanded) : ''}
                     onChange={(e) => setLiveBirths12moExpanded(unformatNumber(e.target.value))}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="Enter number"
                   />
                 </div>
@@ -1435,13 +1439,13 @@ export default function ProspectForm() {
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Include Adoption/Surrogacy Estimates?
                   </label>
                   <select
                     value={adoptionSurrogacyEstimates}
                     onChange={(e) => setAdoptionSurrogacyEstimates(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="yes">Yes</option>
@@ -1450,13 +1454,13 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Adoption Coverage
                   </label>
                   <select
                     value={adoptionCoverage}
                     onChange={(e) => setAdoptionCoverage(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="Full">Full</option>
@@ -1466,26 +1470,26 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Adoption Frequency
                   </label>
                   <input
                     type="text"
                     value={adoptionFrequency}
                     onChange={(e) => setAdoptionFrequency(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="e.g., Once per lifetime, per year, etc."
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Surrogacy Coverage
                   </label>
                   <select
                     value={surrogacyCoverage}
                     onChange={(e) => setSurrogacyCoverage(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                   >
                     <option value="">Select...</option>
                     <option value="Full">Full</option>
@@ -1495,14 +1499,14 @@ export default function ProspectForm() {
                 </div>
 
                 <div>
-                  <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  <label className={labelClass}>
                     Surrogacy Frequency
                   </label>
                   <input
                     type="text"
                     value={surrogacyFrequency}
                     onChange={(e) => setSurrogacyFrequency(e.target.value)}
-                    className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    className={inputClass}
                     placeholder="e.g., Once per lifetime, per year, etc."
                   />
                 </div>
@@ -1516,7 +1520,7 @@ export default function ProspectForm() {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2">
+                <label className={labelClass}>
                   Competing Against (select all that apply)
                 </label>
                 <div className="space-y-3">
@@ -1534,7 +1538,7 @@ export default function ProspectForm() {
                         }}
                         className="w-4 h-4 text-blue-600 rounded"
                       />
-                      <span className="text-slate-700 font-medium">{option}</span>
+                      <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>{option}</span>
                     </label>
                   ))}
                 </div>
@@ -1548,20 +1552,20 @@ export default function ProspectForm() {
 
             <div className="space-y-6">
               <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2">
+                <label className={labelClass}>
                   Additional Notes
                 </label>
                 <textarea
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                  className={inputClass}
                   rows={6}
                   placeholder="Add any additional notes here..."
                 />
               </div>
 
               <div>
-                <label className="block text-sm font-semibold text-slate-800 mb-2">
+                <label className={labelClass}>
                   Attach Census CSV (optional)
                 </label>
                 <input
@@ -1596,3 +1600,10 @@ export default function ProspectForm() {
     </div>
   );
 }
+
+
+
+
+
+
+
