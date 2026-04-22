@@ -1575,45 +1575,6 @@ export default function ProspectForm() {
                     <option value="Unknown">Unknown</option>
                   </select>
                 </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Female Employees (40-60 years)
-                  </label>
-                  <input
-                    type="text"
-                    value={femaleEmployees4060 ? formatNumberWithCommas(femaleEmployees4060) : ''}
-                    onChange={(e) => setFemaleEmployees4060(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="Enter number"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Subscribers/Dependents Under 12
-                  </label>
-                  <input
-                    type="text"
-                    value={subscribersDependentsUnder12 ? formatNumberWithCommas(subscribersDependentsUnder12) : ''}
-                    onChange={(e) => setSubscribersDependentsUnder12(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="Enter number"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Live Births (12 months - Expanded)
-                  </label>
-                  <input
-                    type="text"
-                    value={liveBirths12moExpanded ? formatNumberWithCommas(liveBirths12moExpanded) : ''}
-                    onChange={(e) => setLiveBirths12moExpanded(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="Enter number"
-                  />
-                </div>
               </div>
             </div>
           </div>
@@ -1638,62 +1599,114 @@ export default function ProspectForm() {
                     <option value="no">No</option>
                   </select>
                 </div>
+              </div>
 
-                <div>
-                  <label className={labelClass}>
-                    Adoption Coverage
-                  </label>
-                  <select
-                    value={adoptionCoverage}
-                    onChange={(e) => setAdoptionCoverage(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Full">Full</option>
-                    <option value="Partial">Partial</option>
-                    <option value="None">None</option>
-                  </select>
+              {adoptionSurrogacyEstimates === 'yes' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className={labelClass}>
+                      Adoption Coverage
+                    </label>
+                    <select
+                      value={adoptionCoverage}
+                      onChange={(e) => setAdoptionCoverage(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Full">Full</option>
+                      <option value="Partial">Partial</option>
+                      <option value="None">None</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Adoption Frequency
+                    </label>
+                    <input
+                      type="text"
+                      value={adoptionFrequency}
+                      onChange={(e) => setAdoptionFrequency(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g., Once per lifetime, per year, etc."
+                    />
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Surrogacy Coverage
+                    </label>
+                    <select
+                      value={surrogacyCoverage}
+                      onChange={(e) => setSurrogacyCoverage(e.target.value)}
+                      className={inputClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="Full">Full</option>
+                      <option value="Partial">Partial</option>
+                      <option value="None">None</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className={labelClass}>
+                      Surrogacy Frequency
+                    </label>
+                    <input
+                      type="text"
+                      value={surrogacyFrequency}
+                      onChange={(e) => setSurrogacyFrequency(e.target.value)}
+                      className={inputClass}
+                      placeholder="e.g., Once per lifetime, per year, etc."
+                    />
+                  </div>
                 </div>
+              )}
+            </div>
+          </div>
 
+          {/* Expanded Products Section */}
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Expanded Products</h2>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <label className={labelClass}>
-                    Adoption Frequency
+                    How many female employees, spouses and domestic partners are between age 40-60?
                   </label>
                   <input
                     type="text"
-                    value={adoptionFrequency}
-                    onChange={(e) => setAdoptionFrequency(e.target.value)}
+                    value={femaleEmployees4060 ? formatNumberWithCommas(femaleEmployees4060) : ''}
+                    onChange={(e) => setFemaleEmployees4060(unformatNumber(e.target.value))}
                     className={inputClass}
-                    placeholder="e.g., Once per lifetime, per year, etc."
+                    placeholder="0"
                   />
                 </div>
 
                 <div>
                   <label className={labelClass}>
-                    Surrogacy Coverage
+                    Provide the number of live births in the most recent 12 months
                   </label>
-                  <select
-                    value={surrogacyCoverage}
-                    onChange={(e) => setSurrogacyCoverage(e.target.value)}
+                  <input
+                    type="text"
+                    value={liveBirths12moExpanded ? formatNumberWithCommas(liveBirths12moExpanded) : ''}
+                    onChange={(e) => setLiveBirths12moExpanded(unformatNumber(e.target.value))}
                     className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Full">Full</option>
-                    <option value="Partial">Partial</option>
-                    <option value="None">None</option>
-                  </select>
+                    placeholder="0"
+                  />
                 </div>
 
                 <div>
                   <label className={labelClass}>
-                    Surrogacy Frequency
+                    Please provide the number of subscribers with dependents 12 and under
                   </label>
                   <input
                     type="text"
-                    value={surrogacyFrequency}
-                    onChange={(e) => setSurrogacyFrequency(e.target.value)}
+                    value={subscribersDependentsUnder12 ? formatNumberWithCommas(subscribersDependentsUnder12) : ''}
+                    onChange={(e) => setSubscribersDependentsUnder12(unformatNumber(e.target.value))}
                     className={inputClass}
-                    placeholder="e.g., Once per lifetime, per year, etc."
+                    placeholder="0"
                   />
                 </div>
               </div>
