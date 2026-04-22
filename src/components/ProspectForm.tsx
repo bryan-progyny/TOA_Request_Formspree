@@ -3,7 +3,7 @@ import { Plus, Trash2, Save, AlertTriangle, Sun, Moon } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import { formatCurrency, formatPercentage, unformatCurrency, unformatPercentage, formatNumberWithCommas, unformatNumber } from '../utils/formatting';
 import { useAuth } from '../contexts/AuthContext';
-import { callBayesianAPI, formatFormDataForBayesian, validateBayesianInput, BayesianPredictionInput } from '../utils/bayesianApi';
+import { submitToFormspree } from '../utils/formspree';
 
 type HealthPlanRow = {
   id: string;
@@ -383,113 +383,20 @@ export default function ProspectForm() {
         rushReason,
         distributionType,
         healthPlans,
-        feeType, // <-- Ensure feeType is sent
-        created_by: user?.id, // <-- Add user ID for created_by tracking
+        feeType,
+        created_by: user?.id,
       };
 
-      const apiUrl = `${import.meta.env.VITE_API_URL}/submit-toa-request`;
-
-      // Step 1: Submit form data to API (insert prospects & health_plans)
-      setMessage({ type: 'info', text: 'Submitting form data...' });
+      // Submit form data to Formspree
+      setMessage({ type: 'info', text: 'Submitting your request...' });
       
-      const response = await fetch(apiUrl, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData),
-      });
-
-      // Always read the response as text first (works for JSON + non-JSON)
-      const raw = await response.text();
-
-      console.log('[submit-toa-request] status:', response.status);
-      console.log('[submit-toa-request] raw:', raw);
-
-      // If HTTP failed, throw the MOST informative error possible
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}: ${raw || '(empty response body)'}`);
+      const result = await submitToFormspree(formData);
+      
+      if (!result.ok) {
+        throw new Error(result.error || 'Failed to submit form');
       }
 
-      // If HTTP is ok, optionally parse JSON
-      let result: any = null;
-      try {
-        result = raw ? JSON.parse(raw) : null;
-      } catch {
-        result = null;
-      }
-
-      console.log('[submit-toa-request] parsed:', result);
-
-      // Only treat as failure if the server explicitly says success=false
-      if (result?.success === false) {
-        throw new Error(result?.error || result?.message || 'Server returned success=false');
-      }
-
-      const prospect_id = result?.prospect_id;
-      if (!prospect_id) {
-        throw new Error('No prospect_id returned from server');
-      }
-
-      // Step 2: Call Bayesian API if data is available
-      let bayesianPrediction: any = null;
-      try {
-        setMessage({ type: 'info', text: 'Generating predictions...' });
-        
-        const bayesianInput = formatFormDataForBayesian(formData, prospect_id);
-        const validationErrors = validateBayesianInput(bayesianInput);
-        
-        if (validationErrors.length === 0) {
-          bayesianPrediction = await callBayesianAPI(bayesianInput);
-          console.log('Bayesian prediction:', bayesianPrediction);
-        } else {
-          console.warn('Bayesian input validation warnings:', validationErrors);
-          // Continue without prediction if validation fails
-        }
-      } catch (bayesianError: unknown) {
-        console.warn('Bayesian API call failed:', bayesianError);
-        // Don't fail the whole submission if Bayesian API fails
-        // Just log the warning and continue
-        const errorMsg = bayesianError instanceof Error ? bayesianError.message : String(bayesianError);
-        console.warn(`Bayesian prediction skipped: ${errorMsg}`);
-      }
-
-      // Step 3: If Bayesian prediction succeeded, insert it into the database
-      if (bayesianPrediction) {
-        try {
-          setMessage({ type: 'info', text: 'Saving predictions...' });
-          
-          const bayesianApiUrl = `${import.meta.env.VITE_API_URL}/insert-bayesian-output`;
-          
-          const bayesianInsertRes = await fetch(bayesianApiUrl, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              prospect_id,
-              predicted_rate: bayesianPrediction.predicted_rate,
-              predicted_count: bayesianPrediction.predicted_count,
-              lower_bound: bayesianPrediction.lower_bound,
-              upper_bound: bayesianPrediction.upper_bound,
-            }),
-          });
-
-          const bayesianRaw = await bayesianInsertRes.text();
-          console.log('[insert-bayesian-output] status:', bayesianInsertRes.status);
-          
-          if (!bayesianInsertRes.ok) {
-            console.warn('Failed to save Bayesian output:', bayesianRaw);
-          } else {
-            console.log('[insert-bayesian-output] success');
-          }
-        } catch (bayesianDbError: unknown) {
-          console.warn('Failed to save Bayesian prediction to database:', bayesianDbError);
-          // Don't fail the whole submission
-        }
-      }
-
-      // Overall success message
+      // Success message
       setMessage({ type: 'success', text: 'Request submitted successfully!' });
 
       setProspectName('');
