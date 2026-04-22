@@ -570,7 +570,7 @@ export default function ProspectForm() {
         <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex items-center justify-between gap-6">
             <div className="flex items-center gap-6">
-              <img src="/mea-logo.png" alt="MEA Logo" className="h-20 w-auto" />
+              <img src={`${import.meta.env.BASE_URL}mea-logo.png`} alt="MEA Logo" className="h-20 w-auto" />
               <div className={`w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0`}>
                 <Save className="w-8 h-8 text-white" />
               </div>
