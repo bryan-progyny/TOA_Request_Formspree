@@ -417,15 +417,15 @@ export default function ProspectForm() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100">
       <div className="sticky top-0 z-40 backdrop-blur-md bg-gradient-to-br from-slate-100/95 via-slate-50/95 to-blue-100/95 border-b border-white/30 shadow-lg">
-        <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-between gap-4">
-            <img src="/mea-logo.png" alt="MEA Logo" className="h-12 w-auto" />
-            <div className="text-center flex-1">
+        <div className="max-w-7xl mx-auto px-4 py-4">
+          <div className="flex items-center gap-6">
+            <img src="/mea-logo.png" alt="MEA Logo" className="h-20 w-auto flex-shrink-0" />
+            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+              <Save className="w-8 h-8 text-white" />
+            </div>
+            <div>
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">TOA Request Form</h1>
               <p className="text-slate-600 mt-1">Let's gather the information we need to get started</p>
-            </div>
-            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
-              <Save className="w-7 h-7 text-white" />
             </div>
           </div>
         </div>
