@@ -818,90 +818,90 @@ export default function ProspectForm() {
                           </button>
                         )}
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={plan.healthPlanName}
                           onChange={(e) => updateHealthPlan(plan.id, 'healthPlanName', e.target.value)}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           placeholder="Plan name"
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={plan.deductibleIndividual ? formatCurrency(plan.deductibleIndividual) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'deductibleIndividual', unformatCurrency(e.target.value))}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           placeholder="$0"
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={plan.deductibleFamily ? formatCurrency(plan.deductibleFamily) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'deductibleFamily', unformatCurrency(e.target.value))}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           placeholder="$0"
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <select
                           value={plan.deductibleType}
                           onChange={(e) => updateHealthPlan(plan.id, 'deductibleType', e.target.value)}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                         >
                           <option value="embedded">Embedded</option>
                           <option value="aggregate">Aggregate</option>
                         </select>
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={plan.oopIndividual ? formatCurrency(plan.oopIndividual) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'oopIndividual', unformatCurrency(e.target.value))}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           placeholder="$0"
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={plan.oopFamily ? formatCurrency(plan.oopFamily) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'oopFamily', unformatCurrency(e.target.value))}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           placeholder="$0"
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <select
                           value={plan.oopType}
                           onChange={(e) => updateHealthPlan(plan.id, 'oopType', e.target.value)}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                         >
                           <option value="embedded">Embedded</option>
                           <option value="aggregate">Aggregate</option>
                         </select>
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={plan.coinsuranceIndividual ? formatPercentage(plan.coinsuranceIndividual) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceIndividual', unformatPercentage(e.target.value))}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           placeholder="0%"
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={plan.coinsuranceFamily ? formatPercentage(plan.coinsuranceFamily) : ''}
                           onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceFamily', unformatPercentage(e.target.value))}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           placeholder="0%"
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <input
                           type="text"
                           value={
@@ -931,21 +931,21 @@ export default function ProspectForm() {
                           placeholder={distributionType === 'percentage' ? '0%' : '0'}
                         />
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <select
                           value={plan.hasCopays}
                           onChange={(e) => updateHealthPlan(plan.id, 'hasCopays', e.target.value)}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                         >
                           <option value="no">No</option>
                           <option value="yes">Yes</option>
                         </select>
                       </td>
-                      <td className={order p-0 }>
+                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
                         <select
                           value={plan.copayType}
                           onChange={(e) => updateHealthPlan(plan.id, 'copayType', e.target.value)}
-                          className={w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none }
+                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
                           disabled={plan.hasCopays === 'no'}
                         >
                           <option value="">Select...</option>
