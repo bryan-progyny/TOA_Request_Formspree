@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, Moon, Sun } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import { formatCurrency, formatPercentage, unformatCurrency, unformatPercentage, formatNumberWithCommas, unformatNumber } from '../utils/formatting';
 import { submitToFormspree } from '../utils/formspree';
@@ -75,7 +75,21 @@ export default function ProspectForm() {
   const [feeType, setFeeType] = useState('');
   const [censusFile, setCensusFile] = useState<File | null>(null);
   const [scenarioSmartCycles, setScenarioSmartCycles] = useState<Record<number, string>>({});
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
+    if (savedTheme) {
+      setTheme(savedTheme);
+    }
+  }, []);
+
+  const toggleTheme = () => {
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    setTheme(newTheme);
+    localStorage.setItem('theme', newTheme);
+  };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0] ?? null;
@@ -414,23 +428,77 @@ export default function ProspectForm() {
     }
   };
 
+  // Theme-aware class styles
+  const cardClass = `rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border p-8 ${
+    theme === 'dark'
+      ? 'bg-slate-800 border-slate-700'
+      : 'bg-white border-slate-200'
+  }`;
+
+  const headingClass = `text-2xl font-bold pb-3 border-b ${
+    theme === 'dark'
+      ? 'text-slate-100 border-slate-700'
+      : 'text-slate-900 border-slate-100'
+  }`;
+
+  const labelClass = `block text-sm font-semibold mb-2 ${
+    theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
+  }`;
+
+  const inputClass = `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm hover:shadow ${
+    theme === 'dark'
+      ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400 hover:border-slate-500'
+      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 hover:border-slate-400'
+  }`;
+
+  const selectClass = `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm hover:shadow ${
+    theme === 'dark'
+      ? 'bg-slate-700 border-slate-600 text-slate-100 hover:border-slate-500'
+      : 'bg-white border-slate-300 text-slate-900 hover:border-slate-400'
+  }`;
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100">
-      <div className="sticky top-0 z-40 backdrop-blur-md bg-gradient-to-br from-slate-100/95 via-slate-50/95 to-blue-100/95 border-b border-white/30 shadow-lg">
+    <div className={`min-h-screen transition-colors duration-300 ${
+      theme === 'dark'
+        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
+        : 'bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100'
+    }`}>
+      <div className={`sticky top-0 z-40 backdrop-blur-md border-b shadow-lg transition-colors duration-300 ${
+        theme === 'dark'
+          ? 'bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border-slate-700/30'
+          : 'bg-gradient-to-br from-slate-100/95 via-slate-50/95 to-blue-100/95 border-white/30'
+      }`}>
         <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center gap-6">
-            <img src="/mea-logo.png" alt="MEA Logo" className="h-20 w-auto flex-shrink-0" />
-            <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-              <Save className="w-8 h-8 text-white" />
+          <div className="flex items-center justify-between gap-6">
+            <div className="flex items-center gap-6">
+              <img src="/mea-logo.png" alt="MEA Logo" className="h-20 w-auto flex-shrink-0" />
+              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+                <Save className="w-8 h-8 text-white" />
+              </div>
+              <div>
+                <h1 className={`text-3xl font-bold bg-gradient-to-r ${
+                  theme === 'dark'
+                    ? 'from-slate-100 to-slate-400'
+                    : 'from-slate-900 to-slate-700'
+                } bg-clip-text text-transparent`}>TOA Request Form</h1>
+                <p className={`mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Let's gather the information we need to get started</p>
+              </div>
             </div>
-            <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">TOA Request Form</h1>
-              <p className="text-slate-600 mt-1">Let's gather the information we need to get started</p>
-            </div>
+            <button
+              onClick={toggleTheme}
+              className={`p-3 rounded-xl flex items-center justify-center transition-all ${
+                theme === 'dark'
+                  ? 'bg-slate-700 hover:bg-slate-600 text-yellow-400'
+                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
+              }`}
+              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+            >
+              {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
+            </button>
           </div>
         </div>
       </div>
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className={`max-w-7xl mx-auto px-4 py-12`}>
         {message && (
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 max-w-2xl w-full mx-4">
             <div
@@ -464,8 +532,8 @@ export default function ProspectForm() {
 
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Client Information Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Client Information</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Client Information</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -664,8 +732,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Health Plans Section - kept from original */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-100">Health Plans</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-6`}>Health Plans</h2>
             <div className={`mb-6 p-4 rounded-lg transition-colors ${distributionError ? 'bg-yellow-100 border-2 border-yellow-400' : ''}`}>
               <label className="block text-sm font-semibold text-slate-800 mb-2">
                 Employee Distribution Type *
@@ -901,8 +969,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Current Benefit Details Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Current Benefit Details</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Current Benefit Details</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -979,8 +1047,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Progyny Benefit Proposal Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Progyny Benefit Proposal</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Progyny Benefit Proposal</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1043,8 +1111,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Fertility Scenarios Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Fertility Scenarios</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Fertility Scenarios</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1170,8 +1238,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Medical & Prescription Coverage Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Medical & Prescription Coverage</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Medical & Prescription Coverage</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1296,8 +1364,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Egg Freezing Coverage Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Egg Freezing Coverage</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Egg Freezing Coverage</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1361,8 +1429,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Adoption & Surrogacy Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Adoption & Surrogacy Benefits</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Adoption & Surrogacy Benefits</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -1443,8 +1511,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Competing Solutions Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Competing Solutions</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Competing Solutions</h2>
 
             <div className="space-y-6">
               <div>
@@ -1475,8 +1543,8 @@ export default function ProspectForm() {
           </div>
 
           {/* Notes Section */}
-          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
-            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Notes & Files</h2>
+          <div className={cardClass}>
+            <h2 className={`${headingClass} mb-8`}>Notes & Files</h2>
 
             <div className="space-y-6">
               <div>
