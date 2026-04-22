@@ -73,10 +73,8 @@ export default function ProspectForm() {
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [distributionError, setDistributionError] = useState<boolean>(false);
   const [feeType, setFeeType] = useState('');
-  const [censusFile, setCensusFile] = useState<File | null>(null);
   const [scenarioSmartCycles, setScenarioSmartCycles] = useState<Record<number, string>>({});
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -89,21 +87,6 @@ export default function ProspectForm() {
     const newTheme = theme === 'light' ? 'dark' : 'light';
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
-  };
-
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0] ?? null;
-    if (!file) return;
-
-    const isCsv = file.type === 'text/csv' || file.name.toLowerCase().endsWith('.csv');
-
-    if (!isCsv) {
-      setMessage({ type: 'error', text: 'Please upload a .csv file.' });
-      e.target.value = '';
-      return;
-    }
-
-    setCensusFile(file);
   };
 
   const getEstimatedMembers = () => {
@@ -394,8 +377,6 @@ export default function ProspectForm() {
       setLiveBirths12moExpanded('');
       setSubscribersDependentsUnder12('');
       setNotes('');
-      setCensusFile(null);
-      if (fileInputRef.current) fileInputRef.current.value = '';
       const newDefaultDate = calculateWorkingDays(new Date(), 5);
       setDefaultDueDate(newDefaultDate);
       setDueDate(newDefaultDate);
@@ -743,7 +724,7 @@ export default function ProspectForm() {
                 Employee Distribution Type *
               </label>
               <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
                   <input
                     type="radio"
                     value="percentage"
@@ -756,7 +737,7 @@ export default function ProspectForm() {
                   />
                   <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Percentage (%)</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
                   <input
                     type="radio"
                     value="number"
@@ -769,7 +750,7 @@ export default function ProspectForm() {
                   />
                   <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Number of Employees</span>
                 </label>
-                <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
                   <input
                     type="radio"
                     value="unknown"
@@ -812,7 +793,7 @@ export default function ProspectForm() {
                           <button
                             type="button"
                             onClick={() => removeHealthPlan(plan.id)}
-                            className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                            className={`p-2 rounded-lg transition-all ${theme === 'dark' ? 'text-red-400 hover:text-red-300 hover:bg-red-900/30' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
                           >
                             <Trash2 size={18} />
                           </button>
@@ -1366,7 +1347,7 @@ export default function ProspectForm() {
               </div>
 
               {scenariosCount && parseInt(scenariosCount) > 0 && (
-                <div className="mt-8 pt-8 border-t border-slate-200">
+                <div className={`mt-8 pt-8 border-t ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
                   <h3 className={h3Class}>Smart Cycles Options</h3>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -1399,7 +1380,7 @@ export default function ProspectForm() {
                     )}
                   </div>
 
-                  <div className="pt-6 border-t border-slate-200">
+                  <div className={`pt-6 border-t ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
                     <h4 className={h4Class}>Scenario Selections</h4>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       {Array.from({ length: parseInt(scenariosCount) }).map((_, index) => (
@@ -1724,7 +1705,7 @@ export default function ProspectForm() {
                 </label>
                 <div className="space-y-3">
                   {['Carrot', 'Progyny Legacy', 'Kindbody', 'Maven', 'Other'].map((option) => (
-                    <label key={option} className="flex items-center gap-3 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <label key={option} className={`flex items-center gap-3 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
                       <input
                         type="checkbox"
                         checked={competingAgainst.includes(option)}
@@ -1761,24 +1742,6 @@ export default function ProspectForm() {
                   rows={6}
                   placeholder="Add any additional notes here..."
                 />
-              </div>
-
-              <div>
-                <label className={labelClass}>
-                  Attach Census CSV (optional)
-                </label>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept=".csv"
-                  onChange={handleFileChange}
-                  className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white shadow-sm hover:shadow focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
-                />
-                {censusFile && (
-                  <p className="mt-2 text-sm text-slate-600">
-                    Selected: <span className="font-semibold">{censusFile.name}</span>
-                  </p>
-                )}
               </div>
             </div>
           </div>
