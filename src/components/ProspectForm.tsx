@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, Moon, Sun } from 'lucide-react';
+import { Plus, Trash2, Save, AlertTriangle } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import { formatCurrency, formatPercentage, unformatCurrency, unformatPercentage, formatNumberWithCommas, unformatNumber } from '../utils/formatting';
-import { submitToFormspree } from '../utils/formspree';
+import { supabase } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
+import { callBayesianAPI, formatFormDataForBayesian, validateBayesianInput, BayesianPredictionInput } from '../utils/bayesianApi';
 
 type HealthPlanRow = {
   id: string;
@@ -21,6 +23,7 @@ type HealthPlanRow = {
 };
 
 export default function ProspectForm() {
+  const { user } = useAuth();
   const [prospectName, setProspectName] = useState('');
   const [prospectIndustry, setProspectIndustry] = useState('');
   const [accountLink, setAccountLink] = useState('');
@@ -32,8 +35,6 @@ export default function ProspectForm() {
   const [healthplanPartnership, setHealthplanPartnership] = useState('');
   const [needsCignaSlides, setNeedsCignaSlides] = useState('');
   const [scenariosCount, setScenariosCount] = useState('');
-  const [smartCyclesOption1, setSmartCyclesOption1] = useState('');
-  const [smartCyclesOption2, setSmartCyclesOption2] = useState('');
   const [rxCoverageType, setRxCoverageType] = useState('');
   const [eggFreezingCoverage, setEggFreezingCoverage] = useState('');
   const [fertilityPepm, setFertilityPepm] = useState('');
@@ -71,34 +72,39 @@ export default function ProspectForm() {
   const [distributionType, setDistributionType] = useState<'number' | 'percentage' | 'unknown'>('percentage');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const [duplicateWarning, setDuplicateWarning] = useState<boolean>(false);
+  const [confirmSubmit, setConfirmSubmit] = useState<boolean>(false);
   const [distributionError, setDistributionError] = useState<boolean>(false);
-  const [feeType, setFeeType] = useState('');
-  const [scenarioSmartCycles, setScenarioSmartCycles] = useState<Record<number, string>>({});
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [censusFile, setCensusFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+      const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] ?? null;
+        if (!file) return;
 
-  useEffect(() => {
-    const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
-    if (savedTheme) {
-      setTheme(savedTheme);
-    }
-  }, []);
+        const isCsv =
+          file.type === 'text/csv' ||
+          file.name.toLowerCase().endsWith('.csv');
 
-  const toggleTheme = () => {
-    const newTheme = theme === 'light' ? 'dark' : 'light';
-    setTheme(newTheme);
-    localStorage.setItem('theme', newTheme);
-  };
+        if (!isCsv) {
+          setMessage({ type: 'error', text: 'Please upload a .csv file.' });
+          e.target.value = '';
+          return;
+        }
 
-  const getEstimatedMembers = () => {
-    const employees = parseInt(eligibleEmployees);
-    if (!eligibleEmployees || Number.isNaN(employees) || employees <= 0) {
-      return null;
-    }
+        setCensusFile(file);
+      };
+     
+    const getEstimatedMembers = () => {
+      const employees = parseInt(eligibleEmployees);
+      if (!eligibleEmployees || Number.isNaN(employees) || employees <= 0) {
+        return null;
+      }
 
-    const isUnion = unionType && unionType !== 'Non-Union';
-    const multiplier = isUnion ? 1.6 : 1.4;
-    return Math.round(employees * multiplier);
-  };
+      const isUnion = unionType && unionType !== 'Non-Union';
+      const multiplier = isUnion ? 1.6 : 1.4;
+      return Math.round(employees * multiplier);
+    };
+
 
   const [healthPlans, setHealthPlans] = useState<HealthPlanRow[]>([
     {
@@ -200,6 +206,7 @@ export default function ProspectForm() {
       return 'Please specify if Cigna branded slides are needed';
     }
 
+    // Skip distribution validation if type is 'unknown'
     if (distributionType !== 'unknown') {
       const totalDistribution = healthPlans.reduce((sum, plan) => {
         return sum + (parseFloat(plan.employeeDistribution) || 0);
@@ -245,15 +252,169 @@ export default function ProspectForm() {
     return null;
   };
 
+  const checkForDuplicates = async () => {
+    try {
+      const estimatedMembers = getEstimatedMembers();
+      const effectiveMembers = eligibleMembers
+        ? parseInt(eligibleMembers)
+        : estimatedMembers ?? null;
+
+      const { data: existingProspects, error } = await supabase
+        .from('prospects')
+        .select('*, health_plans(*)')
+        .eq('prospect_name', prospectName)
+        .eq('prospect_industry', prospectIndustry);
+
+      if (error) throw error;
+
+      if (!existingProspects || existingProspects.length === 0) {
+        return false;
+      }
+
+      for (const existing of existingProspects) {
+        const existingHealthPlans = existing.health_plans || [];
+
+        if (existingHealthPlans.length !== healthPlans.length) {
+          continue;
+        }
+
+        const fieldsMatch =
+          existing.union_type === (unionType || null) &&
+          existing.eligible_employees === (eligibleEmployees ? parseInt(eligibleEmployees) : null) &&
+          existing.eligible_members === effectiveMembers &&
+          existing.consultant === (consultant || null) &&
+          existing.channel_partnership === (channelPartnership || null) &&
+          existing.healthplan_partnership === (healthplanPartnership || null) &&
+          existing.needs_cigna_slides === (needsCignaSlides === 'yes' ? true : needsCignaSlides === 'no' ? false : null) &&
+          existing.scenarios_count === (scenariosCount ? parseInt(scenariosCount) : null) &&
+          existing.rx_coverage_type === (rxCoverageType || null) &&
+          existing.egg_freezing_coverage === (eggFreezingCoverage || null) &&
+          existing.fertility_pepm === (fertilityPepm ? parseFloat(unformatCurrency(fertilityPepm)) : null) &&
+          existing.fertility_case_rate === (fertilityCaseRate ? parseFloat(unformatCurrency(fertilityCaseRate)) : null) &&
+          existing.implementation_fee === (implementationFee ? parseFloat(unformatCurrency(implementationFee)) : null) &&
+          existing.current_fertility_benefit === (currentFertilityBenefit || null) &&
+          existing.fertility_administrator === (fertilityAdministrator || null) &&
+          existing.combined_medical_rx_benefit === (combinedMedicalRxBenefit === 'yes' ? true : combinedMedicalRxBenefit === 'no' ? false : null) &&
+          existing.notes === (notes || null) &&
+          existing.due_date === (dueDate || null);
+
+        if (!fieldsMatch) {
+          continue;
+        }
+
+        const healthPlansMatch = healthPlans.every((plan, index) => {
+          const existingPlan = existingHealthPlans[index];
+          if (!existingPlan) return false;
+
+          return (
+            existingPlan.health_plan_name === plan.healthPlanName &&
+            existingPlan.deductible_individual === parseFloat(unformatCurrency(plan.deductibleIndividual)) &&
+            existingPlan.deductible_family === parseFloat(unformatCurrency(plan.deductibleFamily)) &&
+            existingPlan.deductible_type === plan.deductibleType &&
+            existingPlan.oop_individual === parseFloat(unformatCurrency(plan.oopIndividual)) &&
+            existingPlan.oop_family === parseFloat(unformatCurrency(plan.oopFamily)) &&
+            existingPlan.oop_type === plan.oopType &&
+            existingPlan.coinsurance_individual === parseFloat(unformatPercentage(plan.coinsuranceIndividual)) &&
+            existingPlan.coinsurance_family === parseFloat(unformatPercentage(plan.coinsuranceFamily)) &&
+            existingPlan.employee_distribution === parseFloat(distributionType === 'percentage' ? unformatPercentage(plan.employeeDistribution) : unformatNumber(plan.employeeDistribution)) &&
+            existingPlan.employee_distribution_type === distributionType &&
+            existingPlan.has_copays === (plan.hasCopays === 'yes') &&
+            existingPlan.copay_type === (plan.copayType || null)
+          );
+        });
+
+        if (healthPlansMatch) {
+          return true;
+        }
+      }
+
+      return false;
+    } catch (err) {
+      console.error('Error checking for duplicates:', err);
+      return false;
+    }
+  };
+
   const formatSubmitError = (error: unknown): string => {
     if (error instanceof Error) {
-      return error.message?.trim() || 'An unexpected error occurred.';
+      const message = error.message?.trim() || 'An unexpected error occurred.';
+
+      if (/network|failed to fetch|fetch error|timeout/i.test(message)) {
+        return 'Network error. Please check your connection and try again.';
+      }
+
+      if (/permission|not authorized|unauthorized|forbidden/i.test(message)) {
+        return 'You do not have permission to submit this request.';
+      }
+
+      if (/duplicate key|unique constraint/i.test(message)) {
+        return 'A request with the same key already exists.';
+      }
+
+      if (/row level security|rls/i.test(message)) {
+        return 'Your account is not allowed to submit this request.';
+      }
+
+      const httpMatch = message.match(/HTTP\s(\d{3})\s*:\s*(.*)/i);
+      if (httpMatch) {
+        const status = Number(httpMatch[1]);
+        const body = (httpMatch[2] || '').trim();
+        if (status === 400) {
+          return body || 'Some fields are invalid. Please review and try again.';
+        }
+        if (status === 401) {
+          return 'Your session has expired. Please sign in and try again.';
+        }
+        if (status === 403) {
+          return 'You do not have permission to submit this request.';
+        }
+        if (status === 404) {
+          return 'Submission service not found. Please contact support.';
+        }
+        if (status >= 500) {
+          return 'The server ran into an issue. Please try again in a few minutes.';
+        }
+      }
+
+      return message;
     }
+
     if (typeof error === 'string' && error.trim()) {
       return error.trim();
     }
+
     return 'An unexpected error occurred. Please try again.';
   };
+
+    const uploadCensusCsvIfPresent = async (): Promise<string | null> => {
+      if (!censusFile) return null;
+
+      // Create a unique file path in the existing bucket folder
+      const safeProspect = (prospectName || 'prospect')
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+
+      const fileExt = censusFile.name.split('.').pop()?.toLowerCase() || 'csv';
+      const fileName = `${crypto.randomUUID()}.${fileExt}`;
+
+      // Example path: "toa-attachments/census/prospect-name/<uuid>.csv"
+      const filePath = `census/${safeProspect}/${fileName}`;
+
+      const { error } = await supabase.storage
+        .from('toa-attachments')
+        .upload(filePath, censusFile, {
+          contentType: 'text/csv',
+          upsert: false,
+        });
+
+      if (error) {
+        throw new Error(`CSV upload failed: ${error.message}`);
+      }
+
+      return filePath;
+    };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -264,8 +425,22 @@ export default function ProspectForm() {
       return;
     }
 
+    if (!confirmSubmit) {
+      const isDuplicate = await checkForDuplicates();
+      if (isDuplicate) {
+        setDuplicateWarning(true);
+        setMessage({
+          type: 'error',
+          text: 'Warning: An identical submission already exists. Click "Submit Anyway" to proceed.'
+        });
+        return;
+      }
+    }
+
     setIsSubmitting(true);
     setMessage(null);
+    setDuplicateWarning(false);
+    setConfirmSubmit(false);
 
     try {
       const estimatedMembers = getEstimatedMembers();
@@ -275,6 +450,7 @@ export default function ProspectForm() {
         ? String(estimatedMembers)
         : '';
 
+      const censusCsvPath = await uploadCensusCsvIfPresent();
       const formData = {
         prospectName,
         prospectIndustry,
@@ -287,8 +463,6 @@ export default function ProspectForm() {
         healthplanPartnership,
         needsCignaSlides,
         scenariosCount,
-        smartCyclesOption1,
-        smartCyclesOption2,
         rxCoverageType,
         eggFreezingCoverage,
         fertilityPepm,
@@ -321,19 +495,120 @@ export default function ProspectForm() {
         notes,
         dueDate,
         rushReason,
+        censusCsvPath,
         distributionType,
         healthPlans,
-        feeType,
-        scenarioSmartCycles,
+        feeType, // <-- Ensure feeType is sent
+        created_by: user?.id, // <-- Add user ID for created_by tracking
       };
 
-      setMessage({ type: 'success', text: 'Submitting request...' });
-      
-      await submitToFormspree(formData);
+      const apiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/submit-toa-request`;
 
+      // Step 1: Submit form data to Edge Function (insert prospects & health_plans)
+      setMessage({ type: 'info', text: 'Submitting form data...' });
+      
+      const response = await fetch(apiUrl, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
+      });
+
+      // Always read the response as text first (works for JSON + non-JSON)
+      const raw = await response.text();
+
+      console.log('[submit-toa-request] status:', response.status);
+      console.log('[submit-toa-request] raw:', raw);
+
+      // If HTTP failed, throw the MOST informative error possible
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${raw || '(empty response body)'}`);
+      }
+
+      // If HTTP is ok, optionally parse JSON
+      let result: any = null;
+      try {
+        result = raw ? JSON.parse(raw) : null;
+      } catch {
+        result = null;
+      }
+
+      console.log('[submit-toa-request] parsed:', result);
+
+      // Only treat as failure if the server explicitly says success=false
+      if (result?.success === false) {
+        throw new Error(result?.error || result?.message || 'Server returned success=false');
+      }
+
+      const prospect_id = result?.prospect_id;
+      if (!prospect_id) {
+        throw new Error('No prospect_id returned from server');
+      }
+
+      // Step 2: Call Bayesian API if data is available
+      let bayesianPrediction: any = null;
+      try {
+        setMessage({ type: 'info', text: 'Generating predictions...' });
+        
+        const bayesianInput = formatFormDataForBayesian(formData, prospect_id);
+        const validationErrors = validateBayesianInput(bayesianInput);
+        
+        if (validationErrors.length === 0) {
+          bayesianPrediction = await callBayesianAPI(bayesianInput);
+          console.log('Bayesian prediction:', bayesianPrediction);
+        } else {
+          console.warn('Bayesian input validation warnings:', validationErrors);
+          // Continue without prediction if validation fails
+        }
+      } catch (bayesianError: unknown) {
+        console.warn('Bayesian API call failed:', bayesianError);
+        // Don't fail the whole submission if Bayesian API fails
+        // Just log the warning and continue
+        const errorMsg = bayesianError instanceof Error ? bayesianError.message : String(bayesianError);
+        console.warn(`Bayesian prediction skipped: ${errorMsg}`);
+      }
+
+      // Step 3: If Bayesian prediction succeeded, insert it into the database
+      if (bayesianPrediction) {
+        try {
+          setMessage({ type: 'info', text: 'Saving predictions...' });
+          
+          const bayesianApiUrl = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/insert-bayesian-output`;
+          
+          const bayesianInsertRes = await fetch(bayesianApiUrl, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_ANON_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              prospect_id,
+              predicted_rate: bayesianPrediction.predicted_rate,
+              predicted_count: bayesianPrediction.predicted_count,
+              lower_bound: bayesianPrediction.lower_bound,
+              upper_bound: bayesianPrediction.upper_bound,
+            }),
+          });
+
+          const bayesianRaw = await bayesianInsertRes.text();
+          console.log('[insert-bayesian-output] status:', bayesianInsertRes.status);
+          
+          if (!bayesianInsertRes.ok) {
+            console.warn('Failed to save Bayesian output:', bayesianRaw);
+          } else {
+            console.log('[insert-bayesian-output] success');
+          }
+        } catch (bayesianDbError: unknown) {
+          console.warn('Failed to save Bayesian prediction to database:', bayesianDbError);
+          // Don't fail the whole submission
+        }
+      }
+
+      // Overall success message
       setMessage({ type: 'success', text: 'Request submitted successfully!' });
 
-      // Reset form
       setProspectName('');
       setProspectIndustry('');
       setAccountLink('');
@@ -345,8 +620,6 @@ export default function ProspectForm() {
       setHealthplanPartnership('');
       setNeedsCignaSlides('');
       setScenariosCount('');
-      setSmartCyclesOption1('');
-      setSmartCyclesOption2('');
       setRxCoverageType('');
       setEggFreezingCoverage('');
       setFertilityPepm('');
@@ -377,6 +650,8 @@ export default function ProspectForm() {
       setLiveBirths12moExpanded('');
       setSubscribersDependentsUnder12('');
       setNotes('');
+      setCensusFile(null);
+        if (fileInputRef.current) fileInputRef.current.value = '';
       const newDefaultDate = calculateWorkingDays(new Date(), 5);
       setDefaultDueDate(newDefaultDate);
       setDueDate(newDefaultDate);
@@ -399,7 +674,6 @@ export default function ProspectForm() {
           copayType: '',
         },
       ]);
-      setScenarioSmartCycles({});
     } catch (error: unknown) {
       console.error('Error submitting form:', error);
       const errorMessage = formatSubmitError(error);
@@ -409,81 +683,25 @@ export default function ProspectForm() {
     }
   };
 
-  // Theme-aware class styles
-  const cardClass = `rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border p-8 ${
-    theme === 'dark'
-      ? 'bg-slate-800 border-slate-700'
-      : 'bg-white border-slate-200'
-  }`;
-
-  const headingClass = `text-2xl font-bold pb-3 border-b ${
-    theme === 'dark'
-      ? 'text-slate-100 border-slate-700'
-      : 'text-slate-900 border-slate-100'
-  }`;
-
-  const labelClass = `block text-sm font-semibold mb-2 ${
-    theme === 'dark' ? 'text-slate-200' : 'text-slate-800'
-  }`;
-
-  const inputClass = `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm hover:shadow ${
-    theme === 'dark'
-      ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400 hover:border-slate-500'
-      : 'bg-white border-slate-300 text-slate-900 placeholder-slate-400 hover:border-slate-400'
-  }`;
-
-  const selectClass = `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm hover:shadow ${
-    theme === 'dark'
-      ? 'bg-slate-700 border-slate-600 text-slate-100 hover:border-slate-500'
-      : 'bg-white border-slate-300 text-slate-900 hover:border-slate-400'
-  }`;
-
-  const h3Class = `text-lg font-semibold mb-6 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
-  const h4Class = `text-sm font-semibold mb-4 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
-  const tableHeaderClass = `text-xs font-bold uppercase tracking-wide ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
+  // Add state for Fee Type
+  const [feeType, setFeeType] = useState('');
 
   return (
-    <div className={`min-h-screen transition-colors duration-300 ${
-      theme === 'dark'
-        ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900'
-        : 'bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100'
-    }`}>
-      <div className={`sticky top-0 z-40 backdrop-blur-md border-b shadow-lg transition-colors duration-300 ${
-        theme === 'dark'
-          ? 'bg-gradient-to-br from-slate-900/95 via-slate-800/95 to-slate-900/95 border-slate-700/30'
-          : 'bg-gradient-to-br from-slate-100/95 via-slate-50/95 to-blue-100/95 border-white/30'
-      }`}>
-        <div className="max-w-7xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between gap-6">
-            <div className="flex items-center gap-6">
-              <img src="/mea-logo.png" alt="MEA Logo" className="h-20 w-auto flex-shrink-0" />
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
-                <Save className="w-8 h-8 text-white" />
-              </div>
-              <div>
-                <h1 className={`text-3xl font-bold bg-gradient-to-r ${
-                  theme === 'dark'
-                    ? 'from-slate-100 to-slate-400'
-                    : 'from-slate-900 to-slate-700'
-                } bg-clip-text text-transparent`}>TOA Request Form</h1>
-                <p className={`mt-1 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Let's gather the information we need to get started</p>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100">
+      <div className="sticky top-0 z-40 backdrop-blur-md bg-gradient-to-br from-slate-100/95 via-slate-50/95 to-blue-100/95 border-b border-white/30 shadow-lg">
+        <div className="max-w-7xl mx-auto px-4 py-6">
+          <div className="flex items-center justify-end gap-4">
+            <div className="text-right">
+              <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">TOA Request Form</h1>
+              <p className="text-slate-600 mt-1">Let's gather the information we need to get started</p>
             </div>
-            <button
-              onClick={toggleTheme}
-              className={`p-3 rounded-xl flex items-center justify-center transition-all ${
-                theme === 'dark'
-                  ? 'bg-slate-700 hover:bg-slate-600 text-yellow-400'
-                  : 'bg-slate-200 hover:bg-slate-300 text-slate-700'
-              }`}
-              title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
-            >
-              {theme === 'light' ? <Moon size={24} /> : <Sun size={24} />}
-            </button>
+            <div className="w-14 h-14 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
+              <Save className="w-7 h-7 text-white" />
+            </div>
           </div>
         </div>
       </div>
-      <div className={`max-w-7xl mx-auto px-4 py-12`}>
+      <div className="max-w-7xl mx-auto px-4 py-12">
         {message && (
           <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50 max-w-2xl w-full mx-4">
             <div
@@ -516,787 +734,482 @@ export default function ProspectForm() {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Client Information Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Client Information</h2>
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Client Information</h2>
 
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <AutocompleteInput
-                    value={prospectName}
-                    onChange={setProspectName}
-                    optionType="prospect_name"
-                    label="Prospect Name"
-                    placeholder="Type prospect name..."
-                    required
-                    theme={theme}
-                  />
-                </div>
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <AutocompleteInput
+                      value={prospectName}
+                      onChange={setProspectName}
+                      optionType="prospect_name"
+                      label="Prospect Name"
+                      placeholder="Type or select prospect name..."
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label className={labelClass}>
-                    Account Link *
-                  </label>
-                  <input
-                    type="text"
-                    value={accountLink}
-                    onChange={(e) => setAccountLink(e.target.value)}
-                    className={inputClass}
-                    placeholder="Paste Salesforce account link"
-                    required
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Account Link *
+                    </label>
+                    <input
+                      type="text"
+                      value={accountLink}
+                      onChange={(e) => setAccountLink(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="Paste full Salesforce account link"
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <AutocompleteInput
-                    value={prospectIndustry}
-                    onChange={setProspectIndustry}
-                    optionType="prospect_industry"
-                    label="Prospect Industry"
-                    placeholder="Type industry..."
-                    required
-                    theme={theme}
-                  />
-                </div>
+                  <div>
+                    <AutocompleteInput
+                      value={prospectIndustry}
+                      onChange={setProspectIndustry}
+                      optionType="prospect_industry"
+                      label="Prospect Industry"
+                      placeholder="Type or select industry..."
+                      required
+                    />
+                  </div>
 
-                <div>
-                  <label className={labelClass}>
-                    Union Type
-                  </label>
-                  <select
-                    value={unionType}
-                    onChange={(e) => setUnionType(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select union type...</option>
-                    <option value="AFL-CIO">AFL-CIO</option>
-                    <option value="Teamsters">Teamsters</option>
-                    <option value="SEIU">SEIU</option>
-                    <option value="UAW">UAW</option>
-                    <option value="UFCW">UFCW</option>
-                    <option value="Other">Other</option>
-                    <option value="Non-Union">Non-Union</option>
-                  </select>
-                </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Union Type
+                    </label>
+                    <select
+                      value={unionType}
+                      onChange={(e) => setUnionType(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select union type...</option>
+                      <option value="AFL-CIO">AFL-CIO</option>
+                      <option value="Teamsters">Teamsters</option>
+                      <option value="SEIU">SEIU</option>
+                      <option value="UAW">UAW</option>
+                      <option value="UFCW">UFCW</option>
+                      <option value="Other">Other</option>
+                      <option value="Non-Union">Non-Union</option>
+                    </select>
+                  </div>
 
-                <div>
-                  <label className={labelClass}>
-                    # of Eligible Employees *
-                  </label>
-                  <input
-                    type="text"
-                    value={eligibleEmployees ? formatNumberWithCommas(eligibleEmployees) : ''}
-                    onChange={(e) => setEligibleEmployees(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="Enter number"
-                  />
-                </div>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      # of Eligible Employees (Medically Enrolled Employees) *
+                    </label>
+                    <input
+                      type="text"
+                      value={eligibleEmployees ? formatNumberWithCommas(eligibleEmployees) : ''}
+                      onChange={(e) => setEligibleEmployees(unformatNumber(e.target.value))}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="Enter number"
+                    />
+                  </div>
 
-                <div>
-                  <label className={labelClass}>
-                    # of Eligible Members
-                  </label>
-                  <input
-                    type="text"
-                    value={eligibleMembers ? formatNumberWithCommas(eligibleMembers) : ''}
-                    onChange={(e) => setEligibleMembers(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="Enter number"
-                  />
-                  {!eligibleMembers && getEstimatedMembers() !== null && (
-                    <p className="text-xs text-slate-500 mt-1">
-                      Estimated: {formatNumberWithCommas(String(getEstimatedMembers()))}
-                    </p>
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      # of Eligible Members (Employees + Spouses/Dependents)
+                    </label>
+                    <input
+                      type="text"
+                      value={eligibleMembers ? formatNumberWithCommas(eligibleMembers) : ''}
+                      onChange={(e) => setEligibleMembers(unformatNumber(e.target.value))}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="Enter number"
+                    />
+                    {!eligibleMembers && getEstimatedMembers() !== null && (
+                      <p className="text-xs text-slate-500 mt-1">
+                        If left blank, this will be calculated as {formatNumberWithCommas(String(getEstimatedMembers()))}.
+                      </p>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Consultant
+                    </label>
+                    <select
+                      value={consultant}
+                      onChange={(e) => setConsultant(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="WTW">WTW</option>
+                      <option value="Mercer">Mercer</option>
+                      <option value="TPG">TPG</option>
+                      <option value="Others">Others</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Channel Partnership
+                    </label>
+                    <select
+                      value={channelPartnership}
+                      onChange={(e) => setChannelPartnership(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="CVS">CVS</option>
+                      <option value="Caslight">Caslight</option>
+                      <option value="Evernorth">Evernorth</option>
+                      <option value="CHA">CHA</option>
+                      <option value="Quantum">Quantum</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Health-plan Partnership
+                    </label>
+                    <select
+                      value={healthplanPartnership}
+                      onChange={(e) => setHealthplanPartnership(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="IBX">IBX</option>
+                      <option value="BCBSNC">BCBSNC</option>
+                      <option value="HealthPartners">HealthPartners</option>
+                      <option value="Brighton">Brighton</option>
+                      <option value="WebTPA">WebTPA</option>
+                      <option value="MagniCare">MagniCare</option>
+                      <option value="Surest">Surest</option>
+                      <option value="Meritain">Meritain</option>
+                      <option value="Providence">Providence</option>
+                      <option value="BCBS Alabama">BCBS Alabama</option>
+                      <option value="Cigna">Cigna</option>
+                    </select>
+                  </div>
+
+                  {healthplanPartnership === 'Cigna' && (
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-800 mb-2">
+                        Do you need the Cigna branded slides? *
+                      </label>
+                      <select
+                        value={needsCignaSlides}
+                        onChange={(e) => setNeedsCignaSlides(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      >
+                        <option value="">Select...</option>
+                        <option value="yes">Yes</option>
+                        <option value="no">No</option>
+                      </select>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Due Date
+                    </label>
+                    <input
+                      type="date"
+                      value={dueDate}
+                      onChange={(e) => handleDueDateChange(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    />
+                  </div>
+
+                  {showRushReason && (
+                    <div className="md:col-span-2">
+                      <label className="block text-sm font-semibold text-slate-800 mb-2">
+                        Rush Reason (Due date changed from standard 5-day SLA)
+                      </label>
+                      <textarea
+                        value={rushReason}
+                        onChange={(e) => setRushReason(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                        rows={3}
+                        placeholder="Please explain the reason for the date change..."
+                      />
+                    </div>
                   )}
                 </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Consultant
-                  </label>
-                  <select
-                    value={consultant}
-                    onChange={(e) => setConsultant(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="WTW">WTW</option>
-                    <option value="Mercer">Mercer</option>
-                    <option value="TPG">TPG</option>
-                    <option value="Others">Others</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Channel Partnership
-                  </label>
-                  <select
-                    value={channelPartnership}
-                    onChange={(e) => setChannelPartnership(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="CVS">CVS</option>
-                    <option value="Caslight">Caslight</option>
-                    <option value="Evernorth">Evernorth</option>
-                    <option value="CHA">CHA</option>
-                    <option value="Quantum">Quantum</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Health-plan Partnership
-                  </label>
-                  <select
-                    value={healthplanPartnership}
-                    onChange={(e) => setHealthplanPartnership(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="IBX">IBX</option>
-                    <option value="BCBSNC">BCBSNC</option>
-                    <option value="HealthPartners">HealthPartners</option>
-                    <option value="Brighton">Brighton</option>
-                    <option value="WebTPA">WebTPA</option>
-                    <option value="MagniCare">MagniCare</option>
-                    <option value="Surest">Surest</option>
-                    <option value="Meritain">Meritain</option>
-                    <option value="Providence">Providence</option>
-                    <option value="BCBS Alabama">BCBS Alabama</option>
-                    <option value="Cigna">Cigna</option>
-                  </select>
-                </div>
-
-                {healthplanPartnership === 'Cigna' && (
-                  <div>
-                    <label className={labelClass}>
-                      Cigna branded slides? *
-                    </label>
-                    <select
-                      value={needsCignaSlides}
-                      onChange={(e) => setNeedsCignaSlides(e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="">Select...</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
-                  </div>
-                )}
-
-                <div>
-                  <label className={labelClass}>
-                    Due Date
-                  </label>
-                  <input
-                    type="date"
-                    value={dueDate}
-                    onChange={(e) => handleDueDateChange(e.target.value)}
-                    className={inputClass}
-                  />
-                </div>
-
-                {showRushReason && (
-                  <div className="md:col-span-2">
-                    <label className={labelClass}>
-                      Rush Reason
-                    </label>
-                    <textarea
-                      value={rushReason}
-                      onChange={(e) => setRushReason(e.target.value)}
-                      className={inputClass}
-                      rows={3}
-                      placeholder="Explain the date change..."
-                    />
-                  </div>
-                )}
               </div>
-            </div>
           </div>
 
-          {/* Health Plans Section - kept from original */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-6`}>Health Plans</h2>
-            <div className={`mb-6 p-4 rounded-lg transition-colors ${distributionError ? 'bg-yellow-100 border-2 border-yellow-400' : ''}`}>
-              <label className={labelClass}>
-                Employee Distribution Type *
-              </label>
-              <div className="flex gap-4">
-                <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
-                  <input
-                    type="radio"
-                    value="percentage"
-                    checked={distributionType === 'percentage'}
-                    onChange={(e) => {
-                      setDistributionType(e.target.value as 'percentage');
-                      setDistributionError(false);
-                    }}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Percentage (%)</span>
-                </label>
-                <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
-                  <input
-                    type="radio"
-                    value="number"
-                    checked={distributionType === 'number'}
-                    onChange={(e) => {
-                      setDistributionType(e.target.value as 'number');
-                      setDistributionError(false);
-                    }}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Number of Employees</span>
-                </label>
-                <label className={`flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
-                  <input
-                    type="radio"
-                    value="unknown"
-                    checked={distributionType === 'unknown'}
-                    onChange={(e) => {
-                      setDistributionType(e.target.value as 'unknown');
-                      setDistributionError(false);
-                    }}
-                    className="w-4 h-4 text-blue-600"
-                  />
-                  <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>Unknown</span>
-                </label>
-              </div>
-            </div>
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-6 pb-3 border-b border-slate-100">Health Plans</h2>
 
-            <div className={`overflow-x-auto border rounded-xl shadow-sm mb-4 ${theme === 'dark' ? 'border-slate-700 bg-slate-800' : 'border-slate-200 bg-white'}`}>
-              <table className={`w-full border-collapse ${theme === 'dark' ? 'bg-slate-800' : 'bg-white'}`}>
-                <thead>
-                  <tr className={`bg-gradient-to-r ${theme === 'dark' ? 'from-slate-700 to-slate-600' : 'from-slate-50 to-slate-100'}`}>
-                    <th className={`border px-3 py-2 text-center text-xs font-semibold w-[50px] ${theme === 'dark' ? 'border-slate-700 text-slate-200' : 'border-slate-300 text-slate-700'}`}></th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[150px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Health Plan</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Ded Indiv</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Ded Family</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Type</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>OOP Indiv</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>OOP Family</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Type</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Coin Indiv</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[120px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Coin Family</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Distribution</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[100px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Has Copays?</th>
-                    <th className={`${tableHeaderClass} border px-3 py-3 text-left min-w-[150px] ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>Copay Type</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {healthPlans.map((plan) => (
-                    <tr key={plan.id} className={`${theme === 'dark' ? 'hover:bg-slate-700 border-slate-700' : 'hover:bg-slate-50 border-slate-200'}`}>
-                      <td className={`border p-3 text-center ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                        {healthPlans.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removeHealthPlan(plan.id)}
-                            className={`p-2 rounded-lg transition-all ${theme === 'dark' ? 'text-red-400 hover:text-red-300 hover:bg-red-900/30' : 'text-red-600 hover:text-red-700 hover:bg-red-50'}`}
-                          >
-                            <Trash2 size={18} />
-                          </button>
-                        )}
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={plan.healthPlanName}
-                          onChange={(e) => updateHealthPlan(plan.id, 'healthPlanName', e.target.value)}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          placeholder="Plan name"
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={plan.deductibleIndividual ? formatCurrency(plan.deductibleIndividual) : ''}
-                          onChange={(e) => updateHealthPlan(plan.id, 'deductibleIndividual', unformatCurrency(e.target.value))}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          placeholder="$0"
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={plan.deductibleFamily ? formatCurrency(plan.deductibleFamily) : ''}
-                          onChange={(e) => updateHealthPlan(plan.id, 'deductibleFamily', unformatCurrency(e.target.value))}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          placeholder="$0"
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <select
-                          value={plan.deductibleType}
-                          onChange={(e) => updateHealthPlan(plan.id, 'deductibleType', e.target.value)}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                        >
-                          <option value="embedded">Embedded</option>
-                          <option value="aggregate">Aggregate</option>
-                        </select>
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={plan.oopIndividual ? formatCurrency(plan.oopIndividual) : ''}
-                          onChange={(e) => updateHealthPlan(plan.id, 'oopIndividual', unformatCurrency(e.target.value))}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          placeholder="$0"
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={plan.oopFamily ? formatCurrency(plan.oopFamily) : ''}
-                          onChange={(e) => updateHealthPlan(plan.id, 'oopFamily', unformatCurrency(e.target.value))}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          placeholder="$0"
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <select
-                          value={plan.oopType}
-                          onChange={(e) => updateHealthPlan(plan.id, 'oopType', e.target.value)}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                        >
-                          <option value="embedded">Embedded</option>
-                          <option value="aggregate">Aggregate</option>
-                        </select>
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={plan.coinsuranceIndividual ? formatPercentage(plan.coinsuranceIndividual) : ''}
-                          onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceIndividual', unformatPercentage(e.target.value))}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          placeholder="0%"
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={plan.coinsuranceFamily ? formatPercentage(plan.coinsuranceFamily) : ''}
-                          onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceFamily', unformatPercentage(e.target.value))}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          placeholder="0%"
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <input
-                          type="text"
-                          value={
-                            distributionType === 'unknown'
-                              ? '0'
-                              : plan.employeeDistribution
-                              ? distributionType === 'percentage'
-                                ? formatPercentage(plan.employeeDistribution)
-                                : plan.employeeDistribution
-                              : ''
-                          }
-                          onChange={(e) =>
-                            updateHealthPlan(
-                              plan.id,
-                              'employeeDistribution',
-                              distributionType === 'percentage'
-                                ? unformatPercentage(e.target.value)
-                                : e.target.value.replace(/[^0-9]/g, '')
-                            )
-                          }
-                          disabled={distributionType === 'unknown'}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${
-                            distributionType === 'unknown'
-                              ? 'bg-slate-100 cursor-not-allowed text-slate-500'
-                              : 'bg-transparent'
-                          }`}
-                          placeholder={distributionType === 'percentage' ? '0%' : '0'}
-                        />
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <select
-                          value={plan.hasCopays}
-                          onChange={(e) => updateHealthPlan(plan.id, 'hasCopays', e.target.value)}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                        >
-                          <option value="no">No</option>
-                          <option value="yes">Yes</option>
-                        </select>
-                      </td>
-                      <td className={`border p-0 ${theme === 'dark' ? 'border-slate-700 bg-slate-700' : 'border-slate-300 bg-transparent'}`}>
-                        <select
-                          value={plan.copayType}
-                          onChange={(e) => updateHealthPlan(plan.id, 'copayType', e.target.value)}
-                          className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${theme === 'dark' ? 'bg-slate-700 text-slate-100' : 'bg-white text-slate-900'}`}
-                          disabled={plan.hasCopays === 'no'}
-                        >
-                          <option value="">Select...</option>
-                          <option value="Medical and Rx">Medical and Rx</option>
-                          <option value="Medical only">Medical only</option>
-                          <option value="Rx Only">Rx Only</option>
-                          <option value="Surest plan">Surest plan</option>
-                          <option value="Other">Other</option>
-                        </select>
-                      </td>
+              <div className={`mb-6 p-4 rounded-lg transition-colors ${distributionError ? 'bg-yellow-100 border-2 border-yellow-400' : ''}`}>
+                <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  Employee Distribution Type *
+                </label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input
+                      type="radio"
+                      value="percentage"
+                      checked={distributionType === 'percentage'}
+                      onChange={(e) => {
+                        setDistributionType(e.target.value as 'percentage');
+                        setDistributionError(false);
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-slate-700 font-medium">Percentage (%)</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input
+                      type="radio"
+                      value="number"
+                      checked={distributionType === 'number'}
+                      onChange={(e) => {
+                        setDistributionType(e.target.value as 'number');
+                        setDistributionError(false);
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-slate-700 font-medium">Number of Employees</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer px-4 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                    <input
+                      type="radio"
+                      value="unknown"
+                      checked={distributionType === 'unknown'}
+                      onChange={(e) => {
+                        setDistributionType(e.target.value as 'unknown');
+                        setDistributionError(false);
+                      }}
+                      className="w-4 h-4 text-blue-600"
+                    />
+                    <span className="text-slate-700 font-medium">Enrollment distribution unknown</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="overflow-x-auto border border-slate-200 rounded-xl shadow-sm">
+                <table className="w-full border-collapse bg-white">
+                  <thead>
+                    <tr className="bg-gradient-to-r from-slate-50 to-slate-100">
+                      <th className="border border-slate-300 px-3 py-2 text-center text-xs font-semibold text-slate-700 w-[50px]">
+
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[150px]">
+                        Health Plan
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        Deductible Individual
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        Deductible Family
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        Deductible Type
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        OOP Individual
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        OOP Family
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        OOP Type
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        Coinsurance Individual
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[120px]">
+                        Coinsurance Family
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[100px]">
+                        Employee ({distributionType === 'percentage' ? '%' : distributionType === 'number' ? '#' : 'Distribution'})
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[100px]">
+                        Has Copays?
+                      </th>
+                      <th className="border border-slate-200 px-3 py-3 text-left text-xs font-bold text-slate-800 uppercase tracking-wide min-w-[150px]">
+                        Copay Type
+                      </th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            <button
-              type="button"
-              onClick={addHealthPlan}
-              className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
-            >
-              <Plus size={18} />
-              Add Row
-            </button>
-          </div>
-
-          {/* Current Benefit Details Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Current Benefit Details</h2>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={labelClass}>
-                    Does prospect currently offer fertility benefits?
-                  </label>
-                  <select
-                    value={currentFertilityBenefit}
-                    onChange={(e) => setCurrentFertilityBenefit(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="No benefit">No benefit</option>
-                    <option value="Standard benefits">Standard benefits</option>
-                    <option value="Fully insured">Fully insured</option>
-                    <option value="Non-standard benefit (cycle)">Non-standard benefit (cycle)</option>
-                  </select>
-                </div>
-
-                {currentFertilityBenefit && currentFertilityBenefit !== 'No benefit' && (
-                  <div>
-                    <label className={labelClass}>
-                      Current Fertility Administrator
-                    </label>
-                    <input
-                      type="text"
-                      value={fertilityAdministrator}
-                      onChange={(e) => setFertilityAdministrator(e.target.value)}
-                      className={inputClass}
-                      placeholder="e.g., Progyny, Carrot, etc."
-                    />
-                  </div>
-                )}
+                  </thead>
+                  <tbody>
+                    {healthPlans.map((plan, index) => (
+                      <tr key={plan.id} className="hover:bg-slate-50">
+                        <td className="border border-slate-200 p-3 text-center">
+                          {healthPlans.length > 1 && (
+                            <button
+                              type="button"
+                              onClick={() => removeHealthPlan(plan.id)}
+                              className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all"
+                              title="Delete row"
+                            >
+                              <Trash2 size={18} />
+                            </button>
+                          )}
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={plan.healthPlanName}
+                            onChange={(e) => updateHealthPlan(plan.id, 'healthPlanName', e.target.value)}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            placeholder="Plan name"
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={plan.deductibleIndividual ? formatCurrency(plan.deductibleIndividual) : ''}
+                            onChange={(e) => updateHealthPlan(plan.id, 'deductibleIndividual', unformatCurrency(e.target.value))}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            placeholder="$0"
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={plan.deductibleFamily ? formatCurrency(plan.deductibleFamily) : ''}
+                            onChange={(e) => updateHealthPlan(plan.id, 'deductibleFamily', unformatCurrency(e.target.value))}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            placeholder="$0"
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <select
+                            value={plan.deductibleType}
+                            onChange={(e) => updateHealthPlan(plan.id, 'deductibleType', e.target.value)}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          >
+                            <option value="embedded">Embedded</option>
+                            <option value="aggregate">Aggregate</option>
+                          </select>
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={plan.oopIndividual ? formatCurrency(plan.oopIndividual) : ''}
+                            onChange={(e) => updateHealthPlan(plan.id, 'oopIndividual', unformatCurrency(e.target.value))}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            placeholder="$0"
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={plan.oopFamily ? formatCurrency(plan.oopFamily) : ''}
+                            onChange={(e) => updateHealthPlan(plan.id, 'oopFamily', unformatCurrency(e.target.value))}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            placeholder="$0"
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <select
+                            value={plan.oopType}
+                            onChange={(e) => updateHealthPlan(plan.id, 'oopType', e.target.value)}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          >
+                            <option value="embedded">Embedded</option>
+                            <option value="aggregate">Aggregate</option>
+                          </select>
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={plan.coinsuranceIndividual ? formatPercentage(plan.coinsuranceIndividual) : ''}
+                            onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceIndividual', unformatPercentage(e.target.value))}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            placeholder="0%"
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={plan.coinsuranceFamily ? formatPercentage(plan.coinsuranceFamily) : ''}
+                            onChange={(e) => updateHealthPlan(plan.id, 'coinsuranceFamily', unformatPercentage(e.target.value))}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            placeholder="0%"
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <input
+                            type="text"
+                            value={
+                              distributionType === 'unknown'
+                                ? '0'
+                                : plan.employeeDistribution
+                                ? distributionType === 'percentage'
+                                  ? formatPercentage(plan.employeeDistribution)
+                                  : plan.employeeDistribution
+                                : ''
+                            }
+                            onChange={(e) =>
+                              updateHealthPlan(
+                                plan.id,
+                                'employeeDistribution',
+                                distributionType === 'percentage'
+                                  ? unformatPercentage(e.target.value)
+                                  : e.target.value.replace(/[^0-9]/g, '')
+                              )
+                            }
+                            disabled={distributionType === 'unknown'}
+                            className={`w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none ${
+                              distributionType === 'unknown'
+                                ? 'bg-slate-100 cursor-not-allowed text-slate-500'
+                                : 'bg-transparent'
+                            }`}
+                            placeholder={distributionType === 'percentage' ? '0%' : '0'}
+                          />
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <select
+                            value={plan.hasCopays}
+                            onChange={(e) => updateHealthPlan(plan.id, 'hasCopays', e.target.value)}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                          >
+                            <option value="no">No</option>
+                            <option value="yes">Yes</option>
+                          </select>
+                        </td>
+                        <td className="border border-slate-300 p-0">
+                          <select
+                            value={plan.copayType}
+                            onChange={(e) => updateHealthPlan(plan.id, 'copayType', e.target.value)}
+                            className="w-full px-3 py-2 border-0 focus:ring-2 focus:ring-blue-500 outline-none bg-transparent"
+                            disabled={plan.hasCopays === 'no'}
+                          >
+                            <option value="">Select...</option>
+                            <option value="Medical and Rx">Medical and Rx</option>
+                            <option value="Medical only">Medical only</option>
+                            <option value="Rx Only">Rx Only</option>
+                            <option value="Surest plan">Surest plan</option>
+                            <option value="Other">Other</option>
+                          </select>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
 
-              {(currentFertilityBenefit === 'Standard benefits' || currentFertilityBenefit === 'Fully insured') && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className={labelClass}>
-                      Medical Lifetime Maximum
-                    </label>
-                    <input
-                      type="text"
-                      value={currentFertilityMedicalLimit}
-                      onChange={(e) => setCurrentFertilityMedicalLimit(e.target.value)}
-                      className={inputClass}
-                      placeholder="$0.00 or Unlimited"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Medical LTM Type
-                    </label>
-                    <select
-                      value={medicalLtmType}
-                      onChange={(e) => setMedicalLtmType(e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="">Select...</option>
-                      <option value="Lifetime">Lifetime</option>
-                      <option value="Per-Year">Per-Year</option>
-                      <option value="Per-Treatment">Per-Treatment</option>
-                      <option value="Unlimited">Unlimited</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Rx Lifetime Maximum
-                    </label>
-                    <input
-                      type="text"
-                      value={currentFertilityRxLimit}
-                      onChange={(e) => setCurrentFertilityRxLimit(e.target.value)}
-                      className={inputClass}
-                      placeholder="$0.00 or Unlimited"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Rx LTM Type
-                    </label>
-                    <select
-                      value={rxLtmType}
-                      onChange={(e) => setRxLtmType(e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="">Select...</option>
-                      <option value="Lifetime">Lifetime</option>
-                      <option value="Per-Year">Per-Year</option>
-                      <option value="Per-Treatment">Per-Treatment</option>
-                      <option value="Unlimited">Unlimited</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Current Elective Egg Freezing Coverage
-                    </label>
-                    <select
-                      value={currentElectiveEggFreezing}
-                      onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="">Select...</option>
-                      <option value="Covered">Covered</option>
-                      <option value="Not Covered">Not Covered</option>
-                      <option value="Partial">Partial</option>
-                      <option value="Unknown">Unknown</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Live Births (Last 12 Months)
-                    </label>
-                    <input
-                      type="text"
-                      value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
-                      onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
-                      className={inputClass}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Current Benefit - PEPM
-                    </label>
-                    <input
-                      type="text"
-                      value={currentBenefitPepm ? formatCurrency(currentBenefitPepm) : ''}
-                      onChange={(e) => setCurrentBenefitPepm(unformatCurrency(e.target.value))}
-                      className={inputClass}
-                      placeholder="$0.00 per employee/month"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Current Benefit - Case Fee
-                    </label>
-                    <input
-                      type="text"
-                      value={currentBenefitCaseFee ? formatCurrency(currentBenefitCaseFee) : ''}
-                      onChange={(e) => setCurrentBenefitCaseFee(unformatCurrency(e.target.value))}
-                      className={inputClass}
-                      placeholder="$0.00 per case"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {currentFertilityBenefit === 'Non-standard benefit (cycle)' && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className={labelClass}>
-                      Medical Benefit Details
-                    </label>
-                    <textarea
-                      value={medicalBenefitDetails}
-                      onChange={(e) => setMedicalBenefitDetails(e.target.value)}
-                      className={inputClass}
-                      rows={4}
-                      placeholder="Enter medical benefit details..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Rx Benefit Details
-                    </label>
-                    <textarea
-                      value={rxBenefitDetails}
-                      onChange={(e) => setRxBenefitDetails(e.target.value)}
-                      className={inputClass}
-                      rows={4}
-                      placeholder="Enter Rx benefit details..."
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Current Elective Egg Freezing Coverage
-                    </label>
-                    <select
-                      value={currentElectiveEggFreezing}
-                      onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
-                      className={inputClass}
-                    >
-                      <option value="">Select...</option>
-                      <option value="Covered">Covered</option>
-                      <option value="Not Covered">Not Covered</option>
-                      <option value="Partial">Partial</option>
-                      <option value="Unknown">Unknown</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Live Births (Last 12 Months)
-                    </label>
-                    <input
-                      type="text"
-                      value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
-                      onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
-                      className={inputClass}
-                      placeholder="0"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Current Benefit - PEPM
-                    </label>
-                    <input
-                      type="text"
-                      value={currentBenefitPepm ? formatCurrency(currentBenefitPepm) : ''}
-                      onChange={(e) => setCurrentBenefitPepm(unformatCurrency(e.target.value))}
-                      className={inputClass}
-                      placeholder="$0.00 per employee/month"
-                    />
-                  </div>
-
-                  <div>
-                    <label className={labelClass}>
-                      Current Benefit - Case Fee
-                    </label>
-                    <input
-                      type="text"
-                      value={currentBenefitCaseFee ? formatCurrency(currentBenefitCaseFee) : ''}
-                      onChange={(e) => setCurrentBenefitCaseFee(unformatCurrency(e.target.value))}
-                      className={inputClass}
-                      placeholder="$0.00 per case"
-                    />
-                  </div>
-                </div>
-              )}
-
-              {currentFertilityBenefit === 'No benefit' && (
-                <div>
-                  <label className={labelClass}>
-                    Would you like to include a no benefit column in the TOA?
-                  </label>
-                  <select
-                    value={includeNoBenefitColumn}
-                    onChange={(e) => setIncludeNoBenefitColumn(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </div>
-              )}
-            </div>
+              <button
+                type="button"
+                onClick={addHealthPlan}
+                className="mt-4 flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-xl hover:from-blue-700 hover:to-indigo-700 transition-all shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
+              >
+                <Plus size={18} />
+                Add Row
+              </button>
           </div>
 
-          {/* Progyny Benefit Proposal Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Progyny Benefit Proposal</h2>
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">New Benefit</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelClass}>
-                    Fee Type
-                  </label>
-                  <select
-                    value={feeType}
-                    onChange={(e) => setFeeType(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="PEPM">PEPM</option>
-                    <option value="Case Rate">Case Rate</option>
-                    <option value="Hybrid">Hybrid</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Fertility PEPM
-                  </label>
-                  <input
-                    type="text"
-                    value={fertilityPepm ? formatCurrency(fertilityPepm) : ''}
-                    onChange={(e) => setFertilityPepm(unformatCurrency(e.target.value))}
-                    className={inputClass}
-                    placeholder="$0.00 per employee/month"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Fertility Case Rate
-                  </label>
-                  <input
-                    type="text"
-                    value={fertilityCaseRate ? formatCurrency(fertilityCaseRate) : ''}
-                    onChange={(e) => setFertilityCaseRate(unformatCurrency(e.target.value))}
-                    className={inputClass}
-                    placeholder="$0.00 per case"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Implementation Fee
-                  </label>
-                  <input
-                    type="text"
-                    value={implementationFee ? formatCurrency(implementationFee) : ''}
-                    onChange={(e) => setImplementationFee(unformatCurrency(e.target.value))}
-                    className={inputClass}
-                    placeholder="$0.00"
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Fertility Scenarios Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Fertility Scenarios</h2>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={labelClass}>
-                    Number of Scenarios
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    How many scenarios would you like to show?
                   </label>
                   <select
                     value={scenariosCount}
                     onChange={(e) => setScenariosCount(e.target.value)}
-                    className={inputClass}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   >
                     <option value="">Select...</option>
                     <option value="1">1</option>
@@ -1304,126 +1217,391 @@ export default function ProspectForm() {
                   </select>
                 </div>
 
+
+
                 <div>
-                  <label className={labelClass}>
-                    Include "No Benefit" Column
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    How will Rx be covered? (Prog Rx / No Prog Rx)
+                  </label>
+                  <select
+                    value={rxCoverageType}
+                    onChange={(e) => setRxCoverageType(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Prog Rx">Prog Rx</option>
+                    <option value="No Prog Rx">No Prog Rx</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Will elective egg freezing be covered?
+                  </label>
+                  <select
+                    value={eggFreezingCoverage}
+                    onChange={(e) => setEggFreezingCoverage(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Yes (included in the employer cost)">Yes (included in the employer cost)</option>
+                    <option value="Yes (spiked out from the employer cost)">Yes (spiked out from the employer cost)</option>
+                    <option value="No">No</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Fertility PEPM
+                  </label>
+                  <input
+                    type="number"
+                    value={fertilityPepm}
+                    onChange={(e) => setFertilityPepm(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="$0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Fertility Case Rate
+                  </label>
+                  <input
+                    type="number"
+                    value={fertilityCaseRate}
+                    onChange={(e) => setFertilityCaseRate(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="$0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Implementation Fee
+                  </label>
+                  <input
+                    type="number"
+                    value={implementationFee}
+                    onChange={(e) => setImplementationFee(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                    placeholder="$0.00"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Current Benefit</h2>
+
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Does prospect currently offer fertility benefits?
+                  </label>
+                  <select
+                    value={currentFertilityBenefit}
+                    onChange={(e) => setCurrentFertilityBenefit(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
+                  >
+                    <option value="">Select...</option>
+                    <option value="Standard benefits">Standard benefits</option>
+                    <option value="non-standard benefit (cycle)">non-standard benefit (cycle)</option>
+                    <option value="fully insured">fully insured</option>
+                    <option value="No benefit">No benefit</option>
+                  </select>
+                </div>
+
+                {currentFertilityBenefit && currentFertilityBenefit !== 'No benefit' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Who administers the fertility benefit?
+                    </label>
+                    <select
+                      value={fertilityAdministrator}
+                      onChange={(e) => setFertilityAdministrator(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Carrot">Carrot</option>
+                      <option value="Kindbody">Kindbody</option>
+                      <option value="Ovia">Ovia</option>
+                      <option value="WIN">WIN</option>
+                      <option value="Maven">Maven</option>
+                      <option value="Carrier">Carrier</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  </div>
+                )}
+              </div>
+
+              {(currentFertilityBenefit === 'Standard benefits' || currentFertilityBenefit === 'fully insured') && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Does the prospect have combined medical / Rx benefit?
+                    </label>
+                    <select
+                      value={combinedMedicalRxBenefit}
+                      onChange={(e) => setCombinedMedicalRxBenefit(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      What is the current fertility medical dollar limit?
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={currentFertilityMedicalLimit}
+                      onChange={(e) => setCurrentFertilityMedicalLimit(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="$0.00 or Unlimited"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Enter a dollar amount or type Unlimited.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Is medical LTM lifetime or annual?
+                    </label>
+                    <select
+                      value={medicalLtmType}
+                      onChange={(e) => setMedicalLtmType(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Lifetime">Lifetime</option>
+                      <option value="Annual">Annual</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      What is the current fertility Rx dollar limit?
+                    </label>
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={currentFertilityRxLimit}
+                      onChange={(e) => setCurrentFertilityRxLimit(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="$0.00 or Unlimited"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">Enter a dollar amount or type Unlimited.</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Is Rx LTM lifetime or annual?
+                    </label>
+                    <select
+                      value={rxLtmType}
+                      onChange={(e) => setRxLtmType(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Lifetime">Lifetime</option>
+                      <option value="Annual">Annual</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Does the prospect currently offer elective egg freezing?
+                    </label>
+                    <select
+                      value={currentElectiveEggFreezing}
+                      onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="Unsure">Unsure</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Optional - Please provide the number of live births from the latest 12-month reporting period
+                    </label>
+                    <input
+                      type="text"
+                      value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
+                      onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Current benefit PEPM
+                    </label>
+                    <input
+                      type="number"
+                      value={currentBenefitPepm}
+                      onChange={(e) => setCurrentBenefitPepm(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="$0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Current benefit case fee
+                    </label>
+                    <input
+                      type="number"
+                      value={currentBenefitCaseFee}
+                      onChange={(e) => setCurrentBenefitCaseFee(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="$0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {currentFertilityBenefit === 'non-standard benefit (cycle)' && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Please provide medical benefit details here
+                    </label>
+                    <textarea
+                      value={medicalBenefitDetails}
+                      onChange={(e) => setMedicalBenefitDetails(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      rows={4}
+                      placeholder="Enter medical benefit details..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Please provide Rx benefit details here
+                    </label>
+                    <textarea
+                      value={rxBenefitDetails}
+                      onChange={(e) => setRxBenefitDetails(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      rows={4}
+                      placeholder="Enter Rx benefit details..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Does the prospect currently offer elective egg freezing?
+                    </label>
+                    <select
+                      value={currentElectiveEggFreezing}
+                      onChange={(e) => setCurrentElectiveEggFreezing(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Yes">Yes</option>
+                      <option value="No">No</option>
+                      <option value="Unsure">Unsure</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Optional - Please provide the number of live births from the latest 12-month reporting period
+                    </label>
+                    <input
+                      type="text"
+                      value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
+                      onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="0"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Current benefit PEPM
+                    </label>
+                    <input
+                      type="number"
+                      value={currentBenefitPepm}
+                      onChange={(e) => setCurrentBenefitPepm(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="$0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Current benefit case fee
+                    </label>
+                    <input
+                      type="number"
+                      value={currentBenefitCaseFee}
+                      onChange={(e) => setCurrentBenefitCaseFee(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                      placeholder="$0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {currentFertilityBenefit === 'No benefit' && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Would you like to include a no benefit column in the TOA?
                   </label>
                   <select
                     value={includeNoBenefitColumn}
                     onChange={(e) => setIncludeNoBenefitColumn(e.target.value)}
-                    className={inputClass}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   >
                     <option value="">Select...</option>
                     <option value="yes">Yes</option>
                     <option value="no">No</option>
                   </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Include Dollar Max Column
-                  </label>
-                  <select
-                    value={dollarMaxColumn}
-                    onChange={(e) => setDollarMaxColumn(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="yes">Yes</option>
-                    <option value="no">No</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Live Births (12 months)
-                  </label>
-                  <input
-                    type="text"
-                    value={liveBirths12mo ? formatNumberWithCommas(liveBirths12mo) : ''}
-                    onChange={(e) => setLiveBirths12mo(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="Enter number"
-                  />
-                </div>
-              </div>
-
-              {scenariosCount && parseInt(scenariosCount) > 0 && (
-                <div className={`mt-8 pt-8 border-t ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                  <h3 className={h3Class}>Smart Cycles Options</h3>
-                  
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                    <div>
-                      <label className={labelClass}>
-                        Smart Cycles - Option 1
-                      </label>
-                      <input
-                        type="text"
-                        value={smartCyclesOption1}
-                        onChange={(e) => setSmartCyclesOption1(e.target.value)}
-                        className={inputClass}
-                        placeholder="Describe the Smart Cycles option..."
-                      />
-                    </div>
-
-                    {parseInt(scenariosCount) >= 2 && (
-                      <div>
-                        <label className={labelClass}>
-                          Smart Cycles - Option 2
-                        </label>
-                        <input
-                          type="text"
-                          value={smartCyclesOption2}
-                          onChange={(e) => setSmartCyclesOption2(e.target.value)}
-                          className={inputClass}
-                          placeholder="Describe the Smart Cycles option..."
-                        />
-                      </div>
-                    )}
-                  </div>
-
-                  <div className={`pt-6 border-t ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
-                    <h4 className={h4Class}>Scenario Selections</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {Array.from({ length: parseInt(scenariosCount) }).map((_, index) => (
-                        <div key={index}>
-                          <label className={labelClass}>
-                            Scenario {index + 1} - Smart Cycles Option
-                          </label>
-                          <select
-                            value={scenarioSmartCycles[index] || ''}
-                            onChange={(e) => setScenarioSmartCycles({ ...scenarioSmartCycles, [index]: e.target.value })}
-                            className={inputClass}
-                          >
-                            <option value="">Select...</option>
-                            <option value="Option 1">Option 1</option>
-                            <option value="Option 2">Option 2</option>
-                            <option value="Both">Both</option>
-                            <option value="Neither">Neither</option>
-                          </select>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Medical & Prescription Coverage Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Medical & Prescription Coverage</h2>
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Additional</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelClass}>
-                    Combined Medical & Rx Benefit?
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Would you like to see a Dollar Max column for comparison?
                   </label>
                   <select
-                    value={combinedMedicalRxBenefit}
-                    onChange={(e) => setCombinedMedicalRxBenefit(e.target.value)}
-                    className={inputClass}
+                    value={dollarMaxColumn}
+                    onChange={(e) => setDollarMaxColumn(e.target.value)}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   >
                     <option value="">Select...</option>
                     <option value="yes">Yes</option>
@@ -1431,151 +1609,46 @@ export default function ProspectForm() {
                   </select>
                 </div>
 
-                <div>
-                  <label className={labelClass}>
-                    Rx Coverage Type
-                  </label>
-                  <select
-                    value={rxCoverageType}
-                    onChange={(e) => setRxCoverageType(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Covered">Covered</option>
-                    <option value="Not Covered">Not Covered</option>
-                    <option value="Partial">Partial</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Current Fertility Medical Limit
-                  </label>
-                  <input
-                    type="text"
-                    value={currentFertilityMedicalLimit ? formatCurrency(currentFertilityMedicalLimit) : ''}
-                    onChange={(e) => setCurrentFertilityMedicalLimit(unformatCurrency(e.target.value))}
-                    className={inputClass}
-                    placeholder="$0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Medical LTM Type
-                  </label>
-                  <select
-                    value={medicalLtmType}
-                    onChange={(e) => setMedicalLtmType(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Lifetime">Lifetime</option>
-                    <option value="Annual">Annual</option>
-                    <option value="Per Cycle">Per Cycle</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Current Fertility Rx Limit
-                  </label>
-                  <input
-                    type="text"
-                    value={currentFertilityRxLimit ? formatCurrency(currentFertilityRxLimit) : ''}
-                    onChange={(e) => setCurrentFertilityRxLimit(unformatCurrency(e.target.value))}
-                    className={inputClass}
-                    placeholder="$0.00"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Rx LTM Type
-                  </label>
-                  <select
-                    value={rxLtmType}
-                    onChange={(e) => setRxLtmType(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Lifetime">Lifetime</option>
-                    <option value="Annual">Annual</option>
-                    <option value="Per Cycle">Per Cycle</option>
-                  </select>
-                </div>
+                {dollarMaxColumn === 'yes' && (
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      If yes - do we know who we are competing against? (Select up to 2)
+                    </label>
+                    <div className="space-y-2">
+                      {['Carrot', 'Maven', 'Kindbody', 'Win', 'Ovia', 'Carrier', 'Unsure'].map((option) => (
+                        <label key={option} className="flex items-center gap-3 cursor-pointer px-3 py-2 rounded-lg hover:bg-blue-50 transition-colors">
+                          <input
+                            type="checkbox"
+                            checked={competingAgainst.includes(option)}
+                            onChange={(e) => {
+                              if (e.target.checked) {
+                                if (competingAgainst.length < 2) {
+                                  setCompetingAgainst([...competingAgainst, option]);
+                                }
+                              } else {
+                                setCompetingAgainst(competingAgainst.filter((item) => item !== option));
+                              }
+                            }}
+                            disabled={!competingAgainst.includes(option) && competingAgainst.length >= 2}
+                            className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                          />
+                          <span className="text-sm text-slate-700 font-medium">{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
-              <div className="grid grid-cols-1 gap-6">
-                <div>
-                  <label className={labelClass}>
-                    Medical Benefit Details
-                  </label>
-                  <textarea
-                    value={medicalBenefitDetails}
-                    onChange={(e) => setMedicalBenefitDetails(e.target.value)}
-                    className={inputClass}
-                    rows={3}
-                    placeholder="Describe any specific medical benefit details..."
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Rx Benefit Details
-                  </label>
-                  <textarea
-                    value={rxBenefitDetails}
-                    onChange={(e) => setRxBenefitDetails(e.target.value)}
-                    className={inputClass}
-                    rows={3}
-                    placeholder="Describe any specific Rx benefit details..."
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Egg Freezing Coverage Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Egg Freezing Coverage</h2>
-
-            <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelClass}>
-                    Egg Freezing Coverage Type
-                  </label>
-                  <select
-                    value={eggFreezingCoverage}
-                    onChange={(e) => setEggFreezingCoverage(e.target.value)}
-                    className={inputClass}
-                  >
-                    <option value="">Select...</option>
-                    <option value="Covered">Covered</option>
-                    <option value="Not Covered">Not Covered</option>
-                    <option value="Partial">Partial</option>
-                    <option value="Unknown">Unknown</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Adoption & Surrogacy Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Adoption & Surrogacy Benefits</h2>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={labelClass}>
-                    Include Adoption/Surrogacy Estimates?
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Would you like to see adoption and surrogacy cost estimates?
                   </label>
                   <select
                     value={adoptionSurrogacyEstimates}
                     onChange={(e) => setAdoptionSurrogacyEstimates(e.target.value)}
-                    className={inputClass}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                   >
                     <option value="">Select...</option>
                     <option value="yes">Yes</option>
@@ -1586,109 +1659,146 @@ export default function ProspectForm() {
 
               {adoptionSurrogacyEstimates === 'yes' && (
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Adoption Coverage */}
                   <div>
-                    <label className={labelClass}>
-                      Adoption Coverage
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      What coverage would you like to see for adoption?
                     </label>
                     <select
                       value={adoptionCoverage}
                       onChange={(e) => setAdoptionCoverage(e.target.value)}
-                      className={inputClass}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
                     >
                       <option value="">Select...</option>
-                      <option value="Full">Full</option>
-                      <option value="Partial">Partial</option>
-                      <option value="None">None</option>
+                      <option value="5000">$5,000</option>
+                      <option value="7500">$7,500</option>
+                      <option value="10000">$10,000</option>
+                      <option value="12500">$12,500</option>
+                      <option value="15000">$15,000</option>
+                      <option value="17500">$17,500</option>
+                      <option value="20000">$20,000</option>
+                      <option value="25000">$25,000</option>
+                      <option value="30000">$30,000</option>
+                      <option value="unlimited">Unlimited</option>
                     </select>
                   </div>
 
+                  {/* Adoption Frequency */}
                   <div>
-                    <label className={labelClass}>
-                      Adoption Frequency
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Would adoption be per lifetime or per child?
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={adoptionFrequency}
                       onChange={(e) => setAdoptionFrequency(e.target.value)}
-                      className={inputClass}
-                      placeholder="e.g., Once per lifetime, per year, etc."
-                    />
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Per lifetime">Per lifetime</option>
+                      <option value="Per child">Per child</option>
+                    </select>
                   </div>
 
+                  {/* Surrogacy Coverage */}
                   <div>
-                    <label className={labelClass}>
-                      Surrogacy Coverage
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      What coverage would you like to see for surrogacy?
                     </label>
                     <select
                       value={surrogacyCoverage}
                       onChange={(e) => setSurrogacyCoverage(e.target.value)}
-                      className={inputClass}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
                     >
                       <option value="">Select...</option>
-                      <option value="Full">Full</option>
-                      <option value="Partial">Partial</option>
-                      <option value="None">None</option>
+                      <option value="5000">$5,000</option>
+                      <option value="7500">$7,500</option>
+                      <option value="10000">$10,000</option>
+                      <option value="12500">$12,500</option>
+                      <option value="15000">$15,000</option>
+                      <option value="17500">$17,500</option>
+                      <option value="20000">$20,000</option>
+                      <option value="25000">$25,000</option>
+                      <option value="30000">$30,000</option>
+                      <option value="unlimited">Unlimited</option>
                     </select>
                   </div>
 
+                  {/* Surrogacy Frequency */}
                   <div>
-                    <label className={labelClass}>
-                      Surrogacy Frequency
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Would surrogacy be per lifetime or per child?
                     </label>
-                    <input
-                      type="text"
+                    <select
                       value={surrogacyFrequency}
                       onChange={(e) => setSurrogacyFrequency(e.target.value)}
-                      className={inputClass}
-                      placeholder="e.g., Once per lifetime, per year, etc."
-                    />
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="Per lifetime">Per lifetime</option>
+                      <option value="Per child">Per child</option>
+                    </select>
+                  </div>
+
+                  {/* Fee Type Dropdown */}
+                  <div>
+                    <label className="block text-sm font-semibold text-slate-800 mb-2">
+                      Fee Type
+                    </label>
+                    <select
+                      value={feeType}
+                      onChange={(e) => setFeeType(e.target.value)}
+                      className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                    >
+                      <option value="">Select...</option>
+                      <option value="$800 Case Rate">$800 Case Rate</option>
+                      <option value="10% Admin Fee">10% Admin Fee</option>
+                    </select>
                   </div>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Expanded Products Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Expanded Products</h2>
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Expanded Products</h2>
 
             <div className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
-                  <label className={labelClass}>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
                     How many female employees, spouses and domestic partners are between age 40-60?
                   </label>
                   <input
                     type="text"
                     value={femaleEmployees4060 ? formatNumberWithCommas(femaleEmployees4060) : ''}
                     onChange={(e) => setFemaleEmployees4060(unformatNumber(e.target.value))}
-                    className={inputClass}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                     placeholder="0"
                   />
                 </div>
 
                 <div>
-                  <label className={labelClass}>
-                    Provide the number of live births in the most recent 12 months
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Provide the number of live births in the most recent 12 months?
                   </label>
                   <input
                     type="text"
                     value={liveBirths12moExpanded ? formatNumberWithCommas(liveBirths12moExpanded) : ''}
                     onChange={(e) => setLiveBirths12moExpanded(unformatNumber(e.target.value))}
-                    className={inputClass}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                     placeholder="0"
                   />
                 </div>
 
                 <div>
-                  <label className={labelClass}>
+                  <label className="block text-sm font-semibold text-slate-700 mb-2">
                     Please provide the number of subscribers with dependents 12 and under
                   </label>
                   <input
                     type="text"
                     value={subscribersDependentsUnder12 ? formatNumberWithCommas(subscribersDependentsUnder12) : ''}
                     onChange={(e) => setSubscribersDependentsUnder12(unformatNumber(e.target.value))}
-                    className={inputClass}
+                    className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition"
                     placeholder="0"
                   />
                 </div>
@@ -1696,60 +1806,57 @@ export default function ProspectForm() {
             </div>
           </div>
 
-          {/* Competing Solutions Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Competing Solutions</h2>
+          <div className="bg-white rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border border-slate-200 p-8">
+            <h2 className="text-2xl font-bold text-slate-900 mb-8 pb-3 border-b border-slate-100">Notes</h2>
 
-            <div className="space-y-6">
-              <div>
-                <label className={labelClass}>
-                  Competing Against (select all that apply)
-                </label>
-                <div className="space-y-3">
-                  {['Carrot', 'Progyny Legacy', 'Kindbody', 'Maven', 'Other'].map((option) => (
-                    <label key={option} className={`flex items-center gap-3 cursor-pointer px-4 py-2 rounded-lg transition-colors ${theme === 'dark' ? 'hover:bg-slate-700' : 'hover:bg-blue-50'}`}>
-                      <input
-                        type="checkbox"
-                        checked={competingAgainst.includes(option)}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setCompetingAgainst([...competingAgainst, option]);
-                          } else {
-                            setCompetingAgainst(competingAgainst.filter((item) => item !== option));
-                          }
-                        }}
-                        className="w-4 h-4 text-blue-600 rounded"
-                      />
-                      <span className={`font-medium ${theme === "dark" ? "text-slate-300" : "text-slate-700"}`}>{option}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+            <div>
+              <label className="block text-sm font-semibold text-slate-800 mb-2">
+                Additional Notes
+              </label>
+              <textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                rows={6}
+                placeholder="Add any additional notes here..."
+              />
             </div>
-          </div>
-
-          {/* Notes Section */}
-          <div className={cardClass}>
-            <h2 className={`${headingClass} mb-8`}>Notes & Files</h2>
-
-            <div className="space-y-6">
-              <div>
-                <label className={labelClass}>
-                  Additional Notes
+            <div className="mt-6">
+                <label className="block text-sm font-semibold text-slate-800 mb-2">
+                  Attach Census CSV (optional)
                 </label>
-                <textarea
-                  value={notes}
-                  onChange={(e) => setNotes(e.target.value)}
-                  className={inputClass}
-                  rows={6}
-                  placeholder="Add any additional notes here..."
+
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".csv"
+                  onChange={handleFileChange}
+                  className="w-full px-4 py-3 border border-slate-300 rounded-xl bg-white shadow-sm hover:shadow focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all"
                 />
+
+                {censusFile && (
+                  <p className="mt-2 text-sm text-slate-600">
+                    Selected: <span className="font-semibold">{censusFile.name}</span>
+                  </p>
+                )}
               </div>
-            </div>
           </div>
 
-          {/* Submit Button */}
           <div className="flex justify-end gap-4">
+            {duplicateWarning && (
+              <button
+                type="button"
+                onClick={() => {
+                  setConfirmSubmit(true);
+                  setDuplicateWarning(false);
+                  document.querySelector('form')?.requestSubmit();
+                }}
+                className="flex items-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-600 to-orange-600 text-white rounded-xl hover:from-amber-700 hover:to-orange-700 transition-all font-semibold text-lg shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
+              >
+                <AlertTriangle size={22} />
+                Submit Anyway
+              </button>
+            )}
             <button
               type="submit"
               disabled={isSubmitting}
@@ -1764,10 +1871,3 @@ export default function ProspectForm() {
     </div>
   );
 }
-
-
-
-
-
-
-
