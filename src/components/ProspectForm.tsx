@@ -418,8 +418,9 @@ export default function ProspectForm() {
     <div className="min-h-screen bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100">
       <div className="sticky top-0 z-40 backdrop-blur-md bg-gradient-to-br from-slate-100/95 via-slate-50/95 to-blue-100/95 border-b border-white/30 shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-6">
-          <div className="flex items-center justify-end gap-4">
-            <div className="text-right">
+          <div className="flex items-center justify-between gap-4">
+            <img src="/mea-logo.png" alt="MEA Logo" className="h-12 w-auto" />
+            <div className="text-center flex-1">
               <h1 className="text-3xl font-bold bg-gradient-to-r from-slate-900 to-slate-700 bg-clip-text text-transparent">TOA Request Form</h1>
               <p className="text-slate-600 mt-1">Let's gather the information we need to get started</p>
             </div>
