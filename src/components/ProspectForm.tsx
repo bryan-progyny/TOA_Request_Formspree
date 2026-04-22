@@ -1052,13 +1052,15 @@ export default function ProspectForm() {
                   <label className="block text-sm font-semibold text-slate-800 mb-2">
                     Number of Scenarios
                   </label>
-                  <input
-                    type="text"
-                    value={scenariosCount ? formatNumberWithCommas(scenariosCount) : ''}
-                    onChange={(e) => setScenariosCount(unformatNumber(e.target.value))}
+                  <select
+                    value={scenariosCount}
+                    onChange={(e) => setScenariosCount(e.target.value)}
                     className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
-                    placeholder="Enter number"
-                  />
+                  >
+                    <option value="">Select...</option>
+                    <option value="1">1</option>
+                    <option value="2">2</option>
+                  </select>
                 </div>
 
                 <div>
@@ -1107,58 +1109,59 @@ export default function ProspectForm() {
 
               {scenariosCount && parseInt(scenariosCount) > 0 && (
                 <div className="mt-8 pt-8 border-t border-slate-200">
-                  <h3 className="text-lg font-semibold text-slate-800 mb-6">Scenario Smart Cycles Selection</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {Array.from({ length: parseInt(scenariosCount) }).map((_, index) => (
-                      <div key={index}>
-                        <label className="block text-sm font-semibold text-slate-800 mb-2">
-                          Scenario {index + 1} - Smart Cycles Option
-                        </label>
-                        <select
-                          value={scenarioSmartCycles[index] || ''}
-                          onChange={(e) => setScenarioSmartCycles({ ...scenarioSmartCycles, [index]: e.target.value })}
-                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
-                        >
-                          <option value="">Select...</option>
-                          <option value="Option 1">Option 1</option>
-                          <option value="Option 2">Option 2</option>
-                          <option value="Both">Both</option>
-                          <option value="Neither">Neither</option>
-                        </select>
-                      </div>
-                    ))}
-                  </div>
+                  <h3 className="text-lg font-semibold text-slate-800 mb-6">Smart Cycles Options</h3>
+                  
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                    <div>
+                      <label className="block text-sm font-semibold text-slate-800 mb-2">
+                        Smart Cycles - Option 1
+                      </label>
+                      <input
+                        type="text"
+                        value={smartCyclesOption1}
+                        onChange={(e) => setSmartCyclesOption1(e.target.value)}
+                        className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                        placeholder="Describe the Smart Cycles option..."
+                      />
+                    </div>
 
-                  <div className="mt-6 pt-6 border-t border-slate-200">
-                    <h3 className="text-lg font-semibold text-slate-800 mb-6">Smart Cycles Options Details</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {parseInt(scenariosCount) >= 2 && (
                       <div>
                         <label className="block text-sm font-semibold text-slate-800 mb-2">
-                          Smart Cycles - Option 1
+                          Smart Cycles - Option 2
                         </label>
                         <input
                           type="text"
-                          value={smartCyclesOption1}
-                          onChange={(e) => setSmartCyclesOption1(e.target.value)}
+                          value={smartCyclesOption2}
+                          onChange={(e) => setSmartCyclesOption2(e.target.value)}
                           className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
                           placeholder="Describe the Smart Cycles option..."
                         />
                       </div>
+                    )}
+                  </div>
 
-                      {parseInt(scenariosCount) >= 2 && (
-                        <div>
+                  <div className="pt-6 border-t border-slate-200">
+                    <h4 className="text-sm font-semibold text-slate-800 mb-4">Scenario Selections</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {Array.from({ length: parseInt(scenariosCount) }).map((_, index) => (
+                        <div key={index}>
                           <label className="block text-sm font-semibold text-slate-800 mb-2">
-                            Smart Cycles - Option 2
+                            Scenario {index + 1} - Smart Cycles Option
                           </label>
-                          <input
-                            type="text"
-                            value={smartCyclesOption2}
-                            onChange={(e) => setSmartCyclesOption2(e.target.value)}
+                          <select
+                            value={scenarioSmartCycles[index] || ''}
+                            onChange={(e) => setScenarioSmartCycles({ ...scenarioSmartCycles, [index]: e.target.value })}
                             className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
-                            placeholder="Describe the Smart Cycles option..."
-                          />
+                          >
+                            <option value="">Select...</option>
+                            <option value="Option 1">Option 1</option>
+                            <option value="Option 2">Option 2</option>
+                            <option value="Both">Both</option>
+                            <option value="Neither">Neither</option>
+                          </select>
                         </div>
-                      )}
+                      ))}
                     </div>
                   </div>
                 </div>
