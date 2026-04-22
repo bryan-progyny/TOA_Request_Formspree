@@ -74,6 +74,7 @@ export default function ProspectForm() {
   const [distributionError, setDistributionError] = useState<boolean>(false);
   const [feeType, setFeeType] = useState('');
   const [censusFile, setCensusFile] = useState<File | null>(null);
+  const [scenarioSmartCycles, setScenarioSmartCycles] = useState<Record<number, string>>({});
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -326,6 +327,7 @@ export default function ProspectForm() {
         distributionType,
         healthPlans,
         feeType,
+        scenarioSmartCycles,
       };
 
       setMessage({ type: 'success', text: 'Submitting request...' });
@@ -402,6 +404,7 @@ export default function ProspectForm() {
           copayType: '',
         },
       ]);
+      setScenarioSmartCycles({});
     } catch (error: unknown) {
       console.error('Error submitting form:', error);
       const errorMessage = formatSubmitError(error);
@@ -1100,6 +1103,32 @@ export default function ProspectForm() {
                   />
                 </div>
               </div>
+
+              {scenariosCount && parseInt(scenariosCount) > 0 && (
+                <div className="mt-8 pt-8 border-t border-slate-200">
+                  <h3 className="text-lg font-semibold text-slate-800 mb-6">Scenario Smart Cycles Selection</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {Array.from({ length: parseInt(scenariosCount) }).map((_, index) => (
+                      <div key={index}>
+                        <label className="block text-sm font-semibold text-slate-800 mb-2">
+                          Scenario {index + 1} - Smart Cycles Option
+                        </label>
+                        <select
+                          value={scenarioSmartCycles[index] || ''}
+                          onChange={(e) => setScenarioSmartCycles({ ...scenarioSmartCycles, [index]: e.target.value })}
+                          className="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all hover:border-slate-400 bg-white shadow-sm hover:shadow"
+                        >
+                          <option value="">Select...</option>
+                          <option value="Option 1">Option 1</option>
+                          <option value="Option 2">Option 2</option>
+                          <option value="Both">Both</option>
+                          <option value="Neither">Neither</option>
+                        </select>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
