@@ -60,9 +60,6 @@ export default function ProspectForm() {
   const [adoptionFrequency, setAdoptionFrequency] = useState('');
   const [surrogacyCoverage, setSurrogacyCoverage] = useState('');
   const [surrogacyFrequency, setSurrogacyFrequency] = useState('');
-  const [femaleEmployees4060, setFemaleEmployees4060] = useState('');
-  const [liveBirths12moExpanded, setLiveBirths12moExpanded] = useState('');
-  const [subscribersDependentsUnder12, setSubscribersDependentsUnder12] = useState('');
   const [notes, setNotes] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [defaultDueDate, setDefaultDueDate] = useState('');
@@ -381,9 +378,6 @@ export default function ProspectForm() {
         adoptionFrequency,
         surrogacyCoverage,
         surrogacyFrequency,
-        femaleEmployees4060,
-        liveBirths12moExpanded,
-        subscribersDependentsUnder12,
         notes,
         dueDate,
         rushReason,
@@ -535,9 +529,6 @@ export default function ProspectForm() {
       setAdoptionFrequency('');
       setSurrogacyCoverage('');
       setSurrogacyFrequency('');
-      setFemaleEmployees4060('');
-      setLiveBirths12moExpanded('');
-      setSubscribersDependentsUnder12('');
       setNotes('');
       const newDefaultDate = calculateWorkingDays(new Date(), 5);
       setDefaultDueDate(newDefaultDate);
@@ -1655,53 +1646,6 @@ export default function ProspectForm() {
                   </div>
                 </div>
               )}
-            </div>
-          </div>
-
-          <div className={`rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border p-8 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
-            <h2 className={`text-2xl font-bold mb-8 pb-3 border-b ${theme === 'dark' ? 'text-slate-100 border-slate-700' : 'text-slate-900 border-slate-100'}`}>Expanded Products</h2>
-
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className={labelClass}>
-                    How many female employees, spouses and domestic partners are between age 40-60?
-                  </label>
-                  <input
-                    type="text"
-                    value={femaleEmployees4060 ? formatNumberWithCommas(femaleEmployees4060) : ''}
-                    onChange={(e) => setFemaleEmployees4060(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Provide the number of live births in the most recent 12 months?
-                  </label>
-                  <input
-                    type="text"
-                    value={liveBirths12moExpanded ? formatNumberWithCommas(liveBirths12moExpanded) : ''}
-                    onChange={(e) => setLiveBirths12moExpanded(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="0"
-                  />
-                </div>
-
-                <div>
-                  <label className={labelClass}>
-                    Please provide the number of subscribers with dependents 12 and under
-                  </label>
-                  <input
-                    type="text"
-                    value={subscribersDependentsUnder12 ? formatNumberWithCommas(subscribersDependentsUnder12) : ''}
-                    onChange={(e) => setSubscribersDependentsUnder12(unformatNumber(e.target.value))}
-                    className={inputClass}
-                    placeholder="0"
-                  />
-                </div>
-              </div>
             </div>
           </div>
 
