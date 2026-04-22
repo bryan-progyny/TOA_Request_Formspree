@@ -11,6 +11,51 @@ interface AutocompleteInputProps {
   theme?: 'light' | 'dark';
 }
 
+const INDUSTRY_OPTIONS = [
+  'Aerospace & Defense',
+  'Agriculture',
+  'Automotive',
+  'Biotechnology',
+  'Chemical Manufacturing',
+  'Consumer Goods',
+  'Cybersecurity',
+  'Data',
+  'E-Commerce',
+  'Education',
+  'Electronic Manufacturer',
+  'Energy',
+  'Financial Services',
+  'Food and Beverage',
+  'Government Services',
+  'HCW',
+  'Hospital / Health System',
+  'Hospitality',
+  'Information Technology',
+  'Insurance',
+  'Law Firm',
+  'Manufacturing',
+  'Marketing Services',
+  'Media and Entertainment',
+  'Medical Devices and Biotechnology',
+  'Medical Industry',
+  'Merchandise',
+  'Mining',
+  'NonProfit',
+  'Pharma',
+  'Professional Services',
+  'Real Estate Development',
+  'Real Estate Services',
+  'Retail',
+  'SAAS',
+  'Semiconductor',
+  'Tech',
+  'Telecom',
+  'Transport and Logistics',
+  'Transportation Network',
+  'Union',
+  'Veterinary Services',
+];
+
 export default function AutocompleteInput({
   value,
   onChange,
@@ -27,10 +72,15 @@ export default function AutocompleteInput({
   const inputRef = useRef<HTMLInputElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Initialize options (free-text mode - no database fetch)
+  // Initialize options
   useEffect(() => {
     if (!hasAttemptedFetch) {
-      setOptions([]);
+      if (optionType === 'prospect_industry') {
+        setOptions(INDUSTRY_OPTIONS);
+        setFilteredOptions(INDUSTRY_OPTIONS);
+      } else {
+        setOptions([]);
+      }
       setHasAttemptedFetch(true);
     }
   }, [hasAttemptedFetch, optionType]);
@@ -39,16 +89,29 @@ export default function AutocompleteInput({
   const handleInputChange = (inputValue: string) => {
     onChange(inputValue);
 
-    if (inputValue.trim() === '') {
-      setFilteredOptions([]);
-      setIsOpen(false);
+    if (optionType === 'prospect_industry') {
+      if (inputValue.trim() === '') {
+        setFilteredOptions(INDUSTRY_OPTIONS);
+        setIsOpen(true);
+      } else {
+        // Filter options based on wildcard search
+        const filtered = INDUSTRY_OPTIONS.filter((opt) =>
+          opt.toLowerCase().includes(inputValue.toLowerCase())
+        );
+        setFilteredOptions(filtered);
+        setIsOpen(filtered.length > 0);
+      }
     } else {
-      // Filter options based on input
-      const filtered = options.filter((opt) =>
-        opt.toLowerCase().includes(inputValue.toLowerCase())
-      );
-      setFilteredOptions(filtered);
-      setIsOpen(filtered.length > 0);
+      if (inputValue.trim() === '') {
+        setFilteredOptions([]);
+        setIsOpen(false);
+      } else {
+        const filtered = options.filter((opt) =>
+          opt.toLowerCase().includes(inputValue.toLowerCase())
+        );
+        setFilteredOptions(filtered);
+        setIsOpen(filtered.length > 0);
+      }
     }
   };
 
@@ -56,7 +119,6 @@ export default function AutocompleteInput({
   const handleSelectOption = (option: string) => {
     onChange(option);
     setIsOpen(false);
-    setFilteredOptions([]);
   };
 
   // Handle click outside
@@ -88,8 +150,21 @@ export default function AutocompleteInput({
           value={value}
           onChange={(e) => handleInputChange(e.target.value)}
           onFocus={() => {
-            if (filteredOptions.length > 0 || value.trim() === '') {
+            if (optionType === 'prospect_industry') {
+              const filtered = value.trim() === '' 
+                ? INDUSTRY_OPTIONS 
+                : INDUSTRY_OPTIONS.filter((opt) =>
+                    opt.toLowerCase().includes(value.toLowerCase())
+                  );
+              setFilteredOptions(filtered);
               setIsOpen(true);
+            } else if (filteredOptions.length > 0) {
+              setIsOpen(true);
+            }
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              e.preventDefault();
             }
           }}
           className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all shadow-sm hover:shadow ${
@@ -102,7 +177,7 @@ export default function AutocompleteInput({
           required={required}
         />
 
-        {options.length > 0 && (
+        {optionType === 'prospect_industry' && (
           <ChevronDown
             size={20}
             className={`absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none transition-transform ${

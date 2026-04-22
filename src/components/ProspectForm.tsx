@@ -528,7 +528,15 @@ export default function ProspectForm() {
           />
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-8">
+        <form 
+          onSubmit={handleSubmit} 
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName !== 'BUTTON') {
+              e.preventDefault();
+            }
+          }}
+          className="space-y-8"
+        >
           <div className={`rounded-2xl shadow-xl hover:shadow-2xl transition-shadow duration-300 border p-8 ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
             <h2 className={`text-2xl font-bold mb-8 pb-3 border-b ${theme === 'dark' ? 'text-slate-100 border-slate-700' : 'text-slate-900 border-slate-100'}`}>Client Information</h2>
 
