@@ -401,6 +401,8 @@ export default function ProspectForm() {
       setMessage({ type: 'info', text: 'Generating PowerPoint...' });
       await generatePPTX({
         client: prospectName,
+        eligibleEmployees: eligibleEmployees,
+        eligibleMembers: eligibleMembers,
       });
 
       // Success message

@@ -7,6 +7,8 @@ import PizZip from 'pizzip';
 
 export interface PPTXData {
   client: string;
+  eligibleEmployees?: string;
+  eligibleMembers?: string;
 }
 
 /**
@@ -126,6 +128,28 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         content = afterRunDate;
         modified = true;
         replacementsMade++;
+      }
+      
+      // Replace [Fert.h1] with eligible employees
+      if (data.eligibleEmployees) {
+        const afterFerth1 = simpleReplace(content, '[Fert.h1]', data.eligibleEmployees);
+        if (afterFerth1 !== content) {
+          console.log(`✓ Replaced [Fert.h1] in ${filename}`);
+          content = afterFerth1;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [eli.mem] with eligible members
+      if (data.eligibleMembers) {
+        const afterElimem = simpleReplace(content, '[eli.mem]', data.eligibleMembers);
+        if (afterElimem !== content) {
+          console.log(`✓ Replaced [eli.mem] in ${filename}`);
+          content = afterElimem;
+          modified = true;
+          replacementsMade++;
+        }
       }
       
       if (modified) {
