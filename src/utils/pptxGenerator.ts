@@ -65,9 +65,9 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
       let content = zip.files[filename].asText();
       const originalLength = content.length;
       
-      // Search for placeholders across ALL files
-      if (content.includes('[Fert.h1]')) {
-        console.log(`📍 Found [Fert.h1] in ${filename}`);
+      // Search for placeholders across ALL files (try both case variations)
+      if (content.includes('[Fert.h1]') || content.includes('[Fert.H1]')) {
+        console.log(`📍 Found [Fert.h1] or [Fert.H1] in ${filename}`);
       }
       if (content.includes('[eli.mem]')) {
         console.log(`📍 Found [eli.mem] in ${filename}`);
@@ -140,14 +140,23 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         replacementsMade++;
       }
       
-      // Replace [Fert.h1] with eligible employees
+      // Replace [Fert.H1] with eligible employees (capital H)
       if (data.eligibleEmployees) {
-        const afterFerth1 = simpleReplace(content, '[Fert.h1]', data.eligibleEmployees);
+        const afterFerth1 = simpleReplace(content, '[Fert.H1]', data.eligibleEmployees);
         if (afterFerth1 !== content) {
-          console.log(`✓ Replaced [Fert.h1] in ${filename}`);
+          console.log(`✓ Replaced [Fert.H1] in ${filename}`);
           content = afterFerth1;
           modified = true;
           replacementsMade++;
+        } else {
+          // Try lowercase h as fallback
+          const afterFerth1Lower = simpleReplace(content, '[Fert.h1]', data.eligibleEmployees);
+          if (afterFerth1Lower !== content) {
+            console.log(`✓ Replaced [Fert.h1] (lowercase) in ${filename}`);
+            content = afterFerth1Lower;
+            modified = true;
+            replacementsMade++;
+          }
         }
       }
       
