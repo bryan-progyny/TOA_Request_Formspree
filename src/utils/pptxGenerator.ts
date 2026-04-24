@@ -61,16 +61,52 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     let replacementsMade = 0;
     let filesModified = 0;
     
+    // DIAGNOSTIC: Find ALL placeholders in all slide files
+    console.log('\n🔍 Searching for ALL bracketed placeholders in slide files...');
+    xmlFiles.filter(f => f.includes('slide') && !f.includes('slideLayout') && !f.includes('slideMaster')).forEach((filename) => {
+      const content = zip.files[filename].asText();
+      const textRuns = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+      const bracketed = textRuns.filter(run => {
+        const text = run.replace(/<[^>]*>/g, '');
+        return text.includes('[') || text.includes(']');
+      });
+      if (bracketed.length > 0) {
+        console.log(`\n📄 ${filename}:`);
+        bracketed.forEach(run => {
+          const text = run.replace(/<[^>]*>/g, '');
+          console.log(`  "${text}"`);
+        });
+      }
+    });
+    console.log('\n---\n');
+    
     xmlFiles.forEach((filename) => {
       let content = zip.files[filename].asText();
       const originalLength = content.length;
       
-      // Search for placeholders across ALL files (try both case variations)
-      if (content.includes('[Fert.h1]') || content.includes('[Fert.H1]')) {
-        console.log(`📍 Found [Fert.h1] or [Fert.H1] in ${filename}`);
+      // Search for placeholders - check for partial matches and fragments
+      if (content.includes('[Fert') || content.includes('Fert.') || content.includes('.H1]') || content.includes('.h1]')) {
+        console.log(`📍 Found partial/full [Fert.H1] in ${filename}`);
+        // Show the actual text runs in this file
+        const textRuns = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+        const fertRuns = textRuns.filter(run => {
+          const text = run.replace(/<[^>]*>/g, '');
+          return text.includes('Fert') || text.includes('[') && text.toLowerCase().includes('h1');
+        });
+        if (fertRuns.length > 0) {
+          console.log('  Fert-related text runs:', fertRuns.map(r => r.replace(/<[^>]*>/g, '')));
+        }
       }
-      if (content.includes('[eli.mem]')) {
-        console.log(`📍 Found [eli.mem] in ${filename}`);
+      if (content.includes('[eli') || content.includes('eli.') || content.includes('.mem]')) {
+        console.log(`📍 Found partial/full [eli.mem] in ${filename}`);
+        const textRuns = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+        const eliRuns = textRuns.filter(run => {
+          const text = run.replace(/<[^>]*>/g, '');
+          return text.includes('eli') || text.includes('[') && text.toLowerCase().includes('mem');
+        });
+        if (eliRuns.length > 0) {
+          console.log('  eli-related text runs:', eliRuns.map(r => r.replace(/<[^>]*>/g, '')));
+        }
       }
       
       // DEBUG: Dump slide 1 XML to console for inspection
