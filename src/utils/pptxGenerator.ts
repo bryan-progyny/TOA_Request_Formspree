@@ -221,12 +221,15 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         }
       }
       
-      // Replace eli.mem with eligible members
-      // Brackets are in separate text runs, we just replace the middle part
+      // Replace [eli.mem] with eligible members - remove brackets too!
+      // Pattern: <a:t>[</a:t> ... <a:t>eli.mem</a:t> ... <a:t>]</a:t>
+      // Replace entire thing with: <a:t>125</a:t>
       if (data.eligibleMembers) {
-        const afterElimem = simpleReplace(content, 'eli.mem', data.eligibleMembers);
+        // Match the bracket-eli.mem-bracket pattern across text runs
+        const pattern = /<a:t>\[<\/a:t>(?:(?!<a:t>).)*<a:t>eli\.mem<\/a:t>(?:(?!<a:t>).)*<a:t>\]<\/a:t>/g;
+        const afterElimem = content.replace(pattern, `<a:t>${data.eligibleMembers}</a:t>`);
         if (afterElimem !== content) {
-          console.log(`✓ Replaced eli.mem in ${filename}`);
+          console.log(`✓ Replaced [eli.mem] with ${data.eligibleMembers} (removed brackets) in ${filename}`);
           content = afterElimem;
           modified = true;
           replacementsMade++;
