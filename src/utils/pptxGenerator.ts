@@ -10,48 +10,11 @@ export interface PPTXData {
 }
 
 /**
- * Ultra-aggressive replacement that handles extreme XML fragmentation
- * Allows any XML tags/whitespace between each character of the placeholder
+ * Simple replacement - just replaces text without touching XML structure
  */
-function replaceFragmentedText(xml: string, placeholder: string, value: string): string {
-  // Build regex that matches placeholder with ANY XML between each character
-  // Example: [Client] becomes: \[\s*(?:<[^>]*>)*C\s*(?:<[^>]*>)*l\s*(?:<[^>]*>)*i...
-  
-  const chars = placeholder.split('');
-  const pattern = chars.map(char => {
-    const escaped = char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    return escaped + '(?:\\s*<[^>]*>\\s*)*';
-  }).join('');
-  
-  const regex = new RegExp(pattern, 'gi');
-  
-  // Find all matches
-  const matches: Array<{ match: string; index: number }> = [];
-  let match;
-  regex.lastIndex = 0;
-  while ((match = regex.exec(xml)) !== null) {
-    matches.push({ match: match[0], index: match.index });
-    console.log(`Found fragmented "${placeholder}" at position ${match.index}`);
-  }
-  
-  if (matches.length === 0) {
-    return xml;
-  }
-  
-  // Replace in reverse order to preserve indices
-  let result = xml;
-  for (let i = matches.length - 1; i >= 0; i--) {
-    const m = matches[i];
-    // Keep the first opening tag if present
-    const before = result.substring(0, m.index);
-    const after = result.substring(m.index + m.match.length);
-    
-    // Wrap replacement in a:t tags
-    const replacement = `<a:t>${value}</a:t>`;
-    result = before + replacement + after;
-  }
-  
-  return result;
+function simpleReplace(xml: string, placeholder: string, value: string): string {
+  // Use global replace for all occurrences
+  return xml.split(placeholder).join(value);
 }
 
 export async function generatePPTX(data: PPTXData): Promise<void> {
@@ -138,17 +101,26 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
       // Try both case variations
       let modified = false;
       
-      // Replace [Client]
-      const afterClient = replaceFragmentedText(content, '[Client]', data.client);
+      // Replace [Client] (with trailing space)
+      const afterClient = simpleReplace(content, '[Client] ', data.client + ' ');
       if (afterClient !== content) {
-        console.log(`✓ Replaced [Client] in ${filename}`);
+        console.log(`✓ Replaced [Client]  (with space) in ${filename}`);
         content = afterClient;
         modified = true;
         replacementsMade++;
+      } else {
+        // Try without space
+        const afterClient2 = simpleReplace(content, '[Client]', data.client);
+        if (afterClient2 !== content) {
+          console.log(`✓ Replaced [Client] (no space) in ${filename}`);
+          content = afterClient2;
+          modified = true;
+          replacementsMade++;
+        }
       }
       
       // Replace [Run Date]
-      const afterRunDate = replaceFragmentedText(content, '[Run Date]', runDate);
+      const afterRunDate = simpleReplace(content, '[Run Date]', runDate);
       if (afterRunDate !== content) {
         console.log(`✓ Replaced [Run Date] in ${filename}`);
         content = afterRunDate;
