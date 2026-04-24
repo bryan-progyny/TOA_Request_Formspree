@@ -98,6 +98,43 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
       let content = zip.files[filename].asText();
       const originalLength = content.length;
       
+      // DEBUG: Dump slide 1 XML to console for inspection
+      if (filename === 'ppt/slides/slide1.xml') {
+        console.log('\n=== DIAGNOSTIC: SLIDE 1 XML ANALYSIS ===');
+        
+        // Extract all text runs
+        const textRuns = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
+        console.log(`Found ${textRuns.length} text runs in slide 1:\n`);
+        
+        textRuns.forEach((run, i) => {
+          const text = run.replace(/<[^>]*>/g, '');
+          if (text.trim()) {
+            // Highlight any text containing brackets or our keywords
+            if (text.includes('[') || text.includes(']') || 
+                text.toLowerCase().includes('client') || 
+                text.toLowerCase().includes('run') || 
+                text.toLowerCase().includes('date')) {
+              console.log(`  Run ${i}: "${text}" ⭐ POTENTIAL PLACEHOLDER`);
+            } else {
+              console.log(`  Run ${i}: "${text}"`);
+            }
+          }
+        });
+        
+        // Show XML snippet around brackets
+        const bracketIndex = content.indexOf('[');
+        if (bracketIndex !== -1) {
+          console.log('\n📍 XML snippet around first "[" character:');
+          const start = Math.max(0, bracketIndex - 150);
+          const end = Math.min(content.length, bracketIndex + 300);
+          const snippet = content.substring(start, end);
+          console.log(snippet);
+          console.log('');
+        } else {
+          console.log('\n⚠️ No "[" character found in slide 1 XML!');
+        }
+      }
+      
       // Try both case variations
       let modified = false;
       
