@@ -77,33 +77,3 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     throw new Error(`Failed to generate PowerPoint: ${error instanceof Error ? error.message : String(error)}`);
   }
 }
-    
-    const doc = new Docxtemplater(zip, {
-      paragraphLoop: true,
-      linebreaks: true,
-    });
-    
-    // Replace [client] with actual value
-    doc.render(data);
-    
-    // Generate modified PowerPoint
-    const output = doc.getZip().generate({
-      type: 'blob',
-      mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-    });
-    
-    // Download file
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(output);
-    link.download = `TOA_Request_${data.client.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pptx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
-    
-    console.log('PowerPoint generated successfully');
-  } catch (error) {
-    console.error('Error generating PowerPoint:', error);
-    throw new Error('Failed to generate PowerPoint. Please try again.');
-  }
-}
