@@ -13,7 +13,7 @@ export interface PPTXData {
 export async function generatePPTX(data: PPTXData): Promise<void> {
   try {
     // Load template from public folder
-    const templateUrl = ${import.meta.env.BASE_URL}2026_TOA_Slides_BR_VScode_3.12.26.pptx;
+    const templateUrl = `${import.meta.env.BASE_URL}2026_TOA_Slides_BR_VScode_3.12.26.pptx`;
     const response = await fetch(templateUrl);
     
     if (!response.ok) {
@@ -40,7 +40,7 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     // Download file
     const link = document.createElement('a');
     link.href = URL.createObjectURL(output);
-    link.download = TOA_Request__.pptx;
+    link.download = `TOA_Request_${data.client.replace(/[^a-zA-Z0-9]/g, '_')}_${new Date().toISOString().split('T')[0]}.pptx`;
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
