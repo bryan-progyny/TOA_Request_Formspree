@@ -97,21 +97,8 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           console.log('  Fert-related text runs:', fertRuns.map(r => r.replace(/<[^>]*>/g, '')));
         }
       }
-      if (content.includes('[|eli.mem|]') || content.includes('eli.mem') || content.includes('|eli.mem|')) {
-        console.log(`📍 Found partial/full [|eli.mem|] in ${filename}`);
-        const textRuns = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
-        const eliIndex = textRuns.findIndex(run => {
-          const text = run.replace(/<[^>]*>/g, '');
-          return text.includes('eli') || text.toLowerCase().includes('mem');
-        });
-        if (eliIndex !== -1) {
-          // Show 3 text runs before and after for context
-          const start = Math.max(0, eliIndex - 3);
-          const end = Math.min(textRuns.length, eliIndex + 4);
-          const context = textRuns.slice(start, end).map(r => r.replace(/<[^>]*>/g, ''));
-          console.log('  Context (text runs around eli.mem):', context);
-          console.log(`  Full match at index ${eliIndex}:`, textRuns[eliIndex]);
-        }
+      if (content.includes('Mem.$.share')) {
+        console.log(`📍 Found Mem.$.share in ${filename}`);
       }
       
       // DEBUG: Dump slide 1 XML to console for inspection
@@ -201,12 +188,12 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         }
       }
       
-      // Replace [|eli.mem|] with eligible members (has pipes inside brackets!)
+      // Replace Mem.$.share with eligible members (brackets in separate text runs!)
       if (data.eligibleMembers) {
-        const afterElimem = simpleReplace(content, '[|eli.mem|]', data.eligibleMembers);
-        if (afterElimem !== content) {
-          console.log(`✓ Replaced [|eli.mem|] in ${filename}`);
-          content = afterElimem;
+        const afterMemShare = simpleReplace(content, 'Mem.$.share', data.eligibleMembers);
+        if (afterMemShare !== content) {
+          console.log(`✓ Replaced Mem.$.share in ${filename}`);
+          content = afterMemShare;
           modified = true;
           replacementsMade++;
         }
