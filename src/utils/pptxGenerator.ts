@@ -100,12 +100,17 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
       if (content.includes('[eli') || content.includes('eli.') || content.includes('.mem]') || content.includes('eli.mem')) {
         console.log(`📍 Found partial/full eli.mem in ${filename}`);
         const textRuns = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
-        const eliRuns = textRuns.filter(run => {
+        const eliIndex = textRuns.findIndex(run => {
           const text = run.replace(/<[^>]*>/g, '');
-          return text.includes('eli') || text.includes('[') && text.toLowerCase().includes('mem');
+          return text.includes('eli') || text.toLowerCase().includes('mem');
         });
-        if (eliRuns.length > 0) {
-          console.log('  eli-related text runs:', eliRuns.map(r => r.replace(/<[^>]*>/g, '')));
+        if (eliIndex !== -1) {
+          // Show 3 text runs before and after for context
+          const start = Math.max(0, eliIndex - 3);
+          const end = Math.min(textRuns.length, eliIndex + 4);
+          const context = textRuns.slice(start, end).map(r => r.replace(/<[^>]*>/g, ''));
+          console.log('  Context (text runs around eli.mem):', context);
+          console.log(`  Full match at index ${eliIndex}:`, textRuns[eliIndex]);
         }
       }
       
