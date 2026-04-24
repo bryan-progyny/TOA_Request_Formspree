@@ -130,8 +130,8 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           console.log('  Fert-related text runs:', fertRuns.map(r => r.replace(/<[^>]*>/g, '')));
         }
       }
-      if (content.includes('[|eli.mem|]') || content.includes('|eli.mem|') || content.includes('eli.mem')) {
-        console.log(`📍 Found [|eli.mem|] or fragment in ${filename}`);
+      if (content.includes('eli.mem')) {
+        console.log(`📍 Found eli.mem in ${filename}`);
       }
       
       // DEBUG: Dump slide 1 XML to console for inspection
@@ -221,24 +221,15 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         }
       }
       
-      // Replace [|eli.mem|] with eligible members
-      // Try simple replacement first, then fragmented if that fails
+      // Replace eli.mem with eligible members
+      // Brackets are in separate text runs, we just replace the middle part
       if (data.eligibleMembers) {
-        const afterSimple = simpleReplace(content, '[|eli.mem|]', data.eligibleMembers);
-        if (afterSimple !== content) {
-          console.log(`✓ Replaced [|eli.mem|] (simple) in ${filename}`);
-          content = afterSimple;
+        const afterElimem = simpleReplace(content, 'eli.mem', data.eligibleMembers);
+        if (afterElimem !== content) {
+          console.log(`✓ Replaced eli.mem in ${filename}`);
+          content = afterElimem;
           modified = true;
           replacementsMade++;
-        } else {
-          // Try fragmented replacement
-          const fragmentResult = replaceFragmentedEliMem(content, data.eligibleMembers);
-          if (fragmentResult.replaced) {
-            console.log(`✓ Replaced [|eli.mem|] (fragmented) in ${filename}`);
-            content = fragmentResult.content;
-            modified = true;
-            replacementsMade++;
-          }
         }
       }
       
