@@ -97,8 +97,8 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           console.log('  Fert-related text runs:', fertRuns.map(r => r.replace(/<[^>]*>/g, '')));
         }
       }
-      if (content.includes('[eli') || content.includes('eli.') || content.includes('.mem]')) {
-        console.log(`📍 Found partial/full [eli.mem] in ${filename}`);
+      if (content.includes('[eli') || content.includes('eli.') || content.includes('.mem]') || content.includes('eli.mem')) {
+        console.log(`📍 Found partial/full eli.mem in ${filename}`);
         const textRuns = content.match(/<a:t[^>]*>([^<]*)<\/a:t>/g) || [];
         const eliRuns = textRuns.filter(run => {
           const text = run.replace(/<[^>]*>/g, '');
@@ -196,11 +196,11 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         }
       }
       
-      // Replace [eli.mem] with eligible members
+      // Replace eli.mem with eligible members (NO brackets in PowerPoint!)
       if (data.eligibleMembers) {
-        const afterElimem = simpleReplace(content, '[eli.mem]', data.eligibleMembers);
+        const afterElimem = simpleReplace(content, 'eli.mem', data.eligibleMembers);
         if (afterElimem !== content) {
-          console.log(`✓ Replaced [eli.mem] in ${filename}`);
+          console.log(`✓ Replaced eli.mem (no brackets) in ${filename}`);
           content = afterElimem;
           modified = true;
           replacementsMade++;
