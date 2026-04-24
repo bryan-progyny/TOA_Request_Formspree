@@ -14,6 +14,11 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     console.log('Starting PowerPoint generation...');
     console.log('Data:', data);
     
+    // Get today's date in MM/DD/YYYY format
+    const today = new Date();
+    const runDate = `${(today.getMonth() + 1).toString().padStart(2, '0')}/${today.getDate().toString().padStart(2, '0')}/${today.getFullYear()}`;
+    console.log('Run Date:', runDate);
+    
     // Load template from public folder
     const templateUrl = `${import.meta.env.BASE_URL}2026_TOA_Slides_BR_VScode_3.12.26.pptx`;
     console.log('Template URL:', templateUrl);
@@ -30,21 +35,34 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     
     const zip = new PizZip(arrayBuffer);
     
-    // Find and replace text in all slides
+    // Find and replace text in all slides and slide masters
     const files = Object.keys(zip.files);
     console.log('Files in PPTX:', files.filter(f => f.includes('slide')));
     
     files.forEach((filename) => {
-      if (filename.startsWith('ppt/slides/slide') && filename.endsWith('.xml')) {
+      // Process slides, slide masters, and slide layouts
+      if ((filename.startsWith('ppt/slides/slide') || 
+           filename.startsWith('ppt/slideMasters/') || 
+           filename.startsWith('ppt/slideLayouts/')) && 
+          filename.endsWith('.xml')) {
         console.log('Processing:', filename);
         let content = zip.files[filename].asText();
         
-        // Replace [client] placeholder with actual value
+        // Check if content contains our placeholders
+        const hasClient = /\[Client\]/gi.test(content);
+        const hasRunDate = /\[Run Date\]/gi.test(content);
+        
+        if (hasClient || hasRunDate) {
+          console.log(`Found placeholders in ${filename}:`, { hasClient, hasRunDate });
+        }
+        
+        // Replace placeholders (case-insensitive)
         const originalContent = content;
-        content = content.replace(/\[client\]/g, data.client);
+        content = content.replace(/\[Client\]/gi, data.client);
+        content = content.replace(/\[Run Date\]/gi, runDate);
         
         if (content !== originalContent) {
-          console.log(`Replaced [client] with "${data.client}" in ${filename}`);
+          console.log(`Replaced placeholders in ${filename}`);
           zip.file(filename, content);
         }
       }
