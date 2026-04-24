@@ -10,54 +10,47 @@ export interface PPTXData {
 }
 
 /**
- * Replace text in PowerPoint XML, handling cases where text is split across elements
+ * Aggressive text replacement that handles PowerPoint's XML fragmentation
+ * Tries multiple strategies to catch text regardless of how it's split
  */
-function replaceTextInXml(xml: string, searchText: string, replaceText: string): string {
-  // Remove all XML tags to get plain text, do replacement, then put tags back
-  // This handles cases where [Client] is split like: <a:t>[</a:t><a:t>Client</a:t><a:t>]</a:t>
+function replaceInPowerPointXml(xml: string, placeholder: string, value: string): string {
+  let result = xml;
   
-  // Find all text runs (a:t elements)
-  const textPattern = /<a:t[^>]*>([^<]*)<\/a:t>/g;
+  // Strategy 1: Direct replacement (works if text is not fragmented)
+  const directPattern = new RegExp(placeholder.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi');
+  result = result.replace(directPattern, value);
+  
+  // Strategy 2: Replace with XML tags between each character
+  // Handles: <a:t>[</a:t><a:t>C</a:t><a:t>lient</a:t><a:t>]</a:t>
+  const chars = placeholder.split('');
+  const fragmentPattern = chars.map(char => 
+    char.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?:</a:t>\\s*<a:t[^>]*>)?'
+  ).join('');
+  const fragRegex = new RegExp(fragmentPattern, 'gi');
+  
+  // Find matches and replace them
   let match;
-  const textRuns: Array<{ fullMatch: string; text: string; start: number; end: number }> = [];
+  const matches: Array<{ start: number; end: number; text: string }> = [];
   
-  while ((match = textPattern.exec(xml)) !== null) {
-    textRuns.push({
-      fullMatch: match[0],
-      text: match[1],
+  // Reset regex
+  fragRegex.lastIndex = 0;
+  while ((match = fragRegex.exec(result)) !== null) {
+    matches.push({
       start: match.index,
-      end: match.index + match[0].length
+      end: match.index + match[0].length,
+      text: match[0]
     });
   }
   
-  // Concatenate all text content
-  const plainText = textRuns.map(run => run.text).join('');
-  
-  // Check if searchText exists in plain text
-  if (!plainText.includes(searchText)) {
-    return xml;
+  // Replace matches in reverse order to preserve indices
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    const before = result.substring(0, m.start);
+    const after = result.substring(m.end);
+    result = before + value + after;
   }
   
-  console.log(`Found "${searchText}" in concatenated text`);
-  
-  // Replace in plain text
-  const replacedText = plainText.replace(new RegExp(searchText.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'gi'), replaceText);
-  
-  // Now we need to reconstruct the XML
-  // Strategy: Replace all the text runs with the new text in a single run
-  if (textRuns.length > 0) {
-    const firstRun = textRuns[0];
-    const lastRun = textRuns[textRuns.length - 1];
-    
-    // Replace everything from first run to last run with a single new run containing replaced text
-    const before = xml.substring(0, firstRun.start);
-    const after = xml.substring(lastRun.end);
-    const newRun = `<a:t>${replacedText}</a:t>`;
-    
-    return before + newRun + after;
-  }
-  
-  return xml;
+  return result;
 }
 
 export async function generatePPTX(data: PPTXData): Promise<void> {
@@ -74,7 +67,7 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     const minutes = now.getMinutes().toString().padStart(2, '0');
     const seconds = now.getSeconds().toString().padStart(2, '0');
     const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12 || 12; // Convert to 12-hour format
+    hours = hours % 12 || 12;
     const timeString = `${hours}_${minutes}_${seconds}_${ampm}`;
     
     console.log('Run Date:', runDate);
@@ -96,35 +89,46 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     
     const zip = new PizZip(arrayBuffer);
     
-    // Find and replace text in all slides and slide masters
+    // Find and replace text in ALL XML files (not just slides)
     const files = Object.keys(zip.files);
-    console.log('Files in PPTX:', files.filter(f => f.includes('slide')));
+    console.log('Total files in PPTX:', files.length);
     
     let replacementCount = 0;
+    let filesChecked = 0;
     
     files.forEach((filename) => {
-      // Process slides, slide masters, and slide layouts
-      if ((filename.startsWith('ppt/slides/slide') || 
-           filename.startsWith('ppt/slideMasters/') || 
-           filename.startsWith('ppt/slideLayouts/')) && 
-          filename.endsWith('.xml')) {
+      // Process ALL XML files in the presentation
+      if (filename.endsWith('.xml')) {
+        filesChecked++;
         
         let content = zip.files[filename].asText();
+        
+        // Log if we find the placeholder in raw XML
+        if (content.includes('[Client]') || content.includes('[Run Date]') || 
+            content.includes('[') || content.toLowerCase().includes('client') || 
+            content.toLowerCase().includes('run date')) {
+          console.log(`File ${filename} contains potential placeholder text`);
+        }
+        
         const originalContent = content;
         
-        // Replace placeholders using robust method
-        content = replaceTextInXml(content, '[Client]', data.client);
-        content = replaceTextInXml(content, '[Run Date]', runDate);
+        // Try replacing with both strategies
+        content = replaceInPowerPointXml(content, '[Client]', data.client);
+        content = replaceInPowerPointXml(content, '[Run Date]', runDate);
         
         if (content !== originalContent) {
-          console.log(`Replaced placeholders in ${filename}`);
+          console.log(`✓ Successfully replaced text in ${filename}`);
           zip.file(filename, content);
           replacementCount++;
         }
       }
     });
     
-    console.log(`Total files with replacements: ${replacementCount}`);
+    console.log(`Files checked: ${filesChecked}, Files modified: ${replacementCount}`);
+    
+    if (replacementCount === 0) {
+      console.warn('WARNING: No replacements were made. Placeholders might not exist or are formatted differently.');
+    }
     
     // Generate the modified PowerPoint
     const output = zip.generate({
