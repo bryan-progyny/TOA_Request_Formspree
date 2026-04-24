@@ -19,6 +19,39 @@ function simpleReplace(xml: string, placeholder: string, value: string): string 
   return xml.split(placeholder).join(value);
 }
 
+/**
+ * Replace fragmented [|eli.mem|] placeholder that may be split across XML tags
+ * Allows any XML between each character: [, |, e, l, i, ., m, e, m, |, ]
+ */
+function replaceFragmentedEliMem(xml: string, value: string): { content: string; replaced: boolean } {
+  // Pattern: [\s*<[^>]*>\s*]*|\s*<[^>]*>\s*]*e\s*<[^>]*>\s*]*l\s*<[^>]*>\s*]*i...
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*\\|(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*l(?:\\s*<[^>]*>\\s*)*i(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*m(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*m(?:\\s*<[^>]*>\\s*)*\\|(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+    console.log(`Found fragmented [|eli.mem|] at position ${match.index}`);
+  }
+  
+  if (matches.length === 0) {
+    return { content: xml, replaced: false };
+  }
+  
+  // Replace in reverse order to preserve indices
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    const before = result.substring(0, m.index);
+    const after = result.substring(m.index + m.match.length);
+    // Just insert the value - keep it simple
+    result = before + value + after;
+  }
+  
+  return { content: result, replaced: true };
+}
+
 export async function generatePPTX(data: PPTXData): Promise<void> {
   try {
     console.log('=== PowerPoint Generation Started ===');
@@ -97,8 +130,8 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           console.log('  Fert-related text runs:', fertRuns.map(r => r.replace(/<[^>]*>/g, '')));
         }
       }
-      if (content.includes('Mem.$.share')) {
-        console.log(`📍 Found Mem.$.share in ${filename}`);
+      if (content.includes('[|eli.mem|]') || content.includes('|eli.mem|') || content.includes('eli.mem')) {
+        console.log(`📍 Found [|eli.mem|] or fragment in ${filename}`);
       }
       
       // DEBUG: Dump slide 1 XML to console for inspection
@@ -188,14 +221,24 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         }
       }
       
-      // Replace Mem.$.share with eligible members (brackets in separate text runs!)
+      // Replace [|eli.mem|] with eligible members
+      // Try simple replacement first, then fragmented if that fails
       if (data.eligibleMembers) {
-        const afterMemShare = simpleReplace(content, 'Mem.$.share', data.eligibleMembers);
-        if (afterMemShare !== content) {
-          console.log(`✓ Replaced Mem.$.share in ${filename}`);
-          content = afterMemShare;
+        const afterSimple = simpleReplace(content, '[|eli.mem|]', data.eligibleMembers);
+        if (afterSimple !== content) {
+          console.log(`✓ Replaced [|eli.mem|] (simple) in ${filename}`);
+          content = afterSimple;
           modified = true;
           replacementsMade++;
+        } else {
+          // Try fragmented replacement
+          const fragmentResult = replaceFragmentedEliMem(content, data.eligibleMembers);
+          if (fragmentResult.replaced) {
+            console.log(`✓ Replaced [|eli.mem|] (fragmented) in ${filename}`);
+            content = fragmentResult.content;
+            modified = true;
+            replacementsMade++;
+          }
         }
       }
       
