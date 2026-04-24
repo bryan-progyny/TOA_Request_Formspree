@@ -37,6 +37,8 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     const timeString = `${hours}_${minutes}_${seconds}_${ampm}`;
     
     console.log('Run Date:', runDate);
+    console.log('Eligible Employees:', data.eligibleEmployees || 'NOT PROVIDED');
+    console.log('Eligible Members:', data.eligibleMembers || 'NOT PROVIDED');
     
     // Load template
     const templateUrl = `${import.meta.env.BASE_URL}2026_TOA_Slides_BR_VScode_3.12.26.pptx`;
@@ -62,6 +64,14 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
     xmlFiles.forEach((filename) => {
       let content = zip.files[filename].asText();
       const originalLength = content.length;
+      
+      // Search for placeholders across ALL files
+      if (content.includes('[Fert.h1]')) {
+        console.log(`📍 Found [Fert.h1] in ${filename}`);
+      }
+      if (content.includes('[eli.mem]')) {
+        console.log(`📍 Found [eli.mem] in ${filename}`);
+      }
       
       // DEBUG: Dump slide 1 XML to console for inspection
       if (filename === 'ppt/slides/slide1.xml') {
