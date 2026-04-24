@@ -4,6 +4,7 @@ import AutocompleteInput from './AutocompleteInput';
 import { formatCurrency, formatPercentage, unformatCurrency, unformatPercentage, formatNumberWithCommas, unformatNumber } from '../utils/formatting';
 import { useAuth } from '../contexts/AuthContext';
 import { submitToFormspree } from '../utils/formspree';
+import { generatePPTX } from '../utils/pptxGenerator';
 
 type HealthPlanRow = {
   id: string;
@@ -396,8 +397,14 @@ export default function ProspectForm() {
         throw new Error(result.error || 'Failed to submit form');
       }
 
+      // Generate and download PowerPoint
+      setMessage({ type: 'info', text: 'Generating PowerPoint...' });
+      await generatePPTX({
+        client: prospectName,
+      });
+
       // Success message
-      setMessage({ type: 'success', text: 'Request submitted successfully!' });
+      setMessage({ type: 'success', text: 'Request submitted successfully! PowerPoint downloaded.' });
 
       setProspectName('');
       setProspectIndustry('');
