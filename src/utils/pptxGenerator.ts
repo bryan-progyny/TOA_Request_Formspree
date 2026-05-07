@@ -9,6 +9,7 @@ export interface PPTXData {
   client: string;
   eligibleEmployees?: string;
   eligibleMembers?: string;
+  pepm?: string;
 }
 
 /**
@@ -231,6 +232,17 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         if (afterElimem !== content) {
           console.log(`✓ Replaced [eli.mem] with ${data.eligibleMembers} (removed brackets) in ${filename}`);
           content = afterElimem;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [PEPM] with fertility PEPM value
+      if (data.pepm) {
+        const afterPepm = simpleReplace(content, '[PEPM]', data.pepm);
+        if (afterPepm !== content) {
+          console.log(`✓ Replaced [PEPM] with ${data.pepm} in ${filename}`);
+          content = afterPepm;
           modified = true;
           replacementsMade++;
         }

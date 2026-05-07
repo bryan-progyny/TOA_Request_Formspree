@@ -597,6 +597,7 @@ export default function ProspectForm() {
         client: prospectName,
         eligibleEmployees: eligibleEmployees,
         eligibleMembers: eligibleMembers,
+        pepm: fertilityPepm,
       });
       setIsGeneratingPPTX(false);
 
