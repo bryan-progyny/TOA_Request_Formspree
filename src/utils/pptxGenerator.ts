@@ -10,6 +10,10 @@ export interface PPTXData {
   eligibleEmployees?: string;
   eligibleMembers?: string;
   pepm?: string;
+  caseRate?: string;
+  adoptionLimit?: string;
+  surrogacyLimit?: string;
+  feeType?: string;
 }
 
 /**
@@ -243,6 +247,50 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         if (afterPepm !== content) {
           console.log(`✓ Replaced [PEPM] with ${data.pepm} in ${filename}`);
           content = afterPepm;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [coach.case.fee] with fertility case rate
+      if (data.caseRate) {
+        const afterCaseRate = simpleReplace(content, '[coach.case.fee]', data.caseRate);
+        if (afterCaseRate !== content) {
+          console.log(`✓ Replaced [coach.case.fee] with ${data.caseRate} in ${filename}`);
+          content = afterCaseRate;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [AL] with adoption limit
+      if (data.adoptionLimit) {
+        const afterAL = simpleReplace(content, '[AL]', data.adoptionLimit);
+        if (afterAL !== content) {
+          console.log(`✓ Replaced [AL] with ${data.adoptionLimit} in ${filename}`);
+          content = afterAL;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [SL] with surrogacy limit
+      if (data.surrogacyLimit) {
+        const afterSL = simpleReplace(content, '[SL]', data.surrogacyLimit);
+        if (afterSL !== content) {
+          console.log(`✓ Replaced [SL] with ${data.surrogacyLimit} in ${filename}`);
+          content = afterSL;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [case.or.admin] with fee type
+      if (data.feeType) {
+        const afterFeeType = simpleReplace(content, '[case.or.admin]', data.feeType);
+        if (afterFeeType !== content) {
+          console.log(`✓ Replaced [case.or.admin] with ${data.feeType} in ${filename}`);
+          content = afterFeeType;
           modified = true;
           replacementsMade++;
         }

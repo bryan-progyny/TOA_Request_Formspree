@@ -598,6 +598,10 @@ export default function ProspectForm() {
         eligibleEmployees: eligibleEmployees,
         eligibleMembers: eligibleMembers,
         pepm: fertilityPepm,
+        caseRate: fertilityCaseRate,
+        adoptionLimit: adoptionCoverage,
+        surrogacyLimit: surrogacyCoverage,
+        feeType: feeType,
       });
       setIsGeneratingPPTX(false);
 
