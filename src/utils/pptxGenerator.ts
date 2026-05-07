@@ -340,11 +340,11 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         }
       }
       
-      // Replace [Meno.Users] with calculated menopause users
+      // Replace [meno.users] with calculated menopause users
       if (data.menoUsers) {
-        const afterMenoUsers = simpleReplace(content, '[Meno.Users]', data.menoUsers);
+        const afterMenoUsers = simpleReplace(content, '[meno.users]', data.menoUsers);
         if (afterMenoUsers !== content) {
-          console.log(`✓ Replaced [Meno.Users] with ${data.menoUsers} in ${filename}`);
+          console.log(`✓ Replaced [meno.users] with ${data.menoUsers} in ${filename}`);
           content = afterMenoUsers;
           modified = true;
           replacementsMade++;
