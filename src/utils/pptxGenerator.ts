@@ -19,6 +19,13 @@ export interface PPTXData {
   menoPercent?: string;
   menoUsers?: string;
   menoDollars?: string;
+  parPercent?: string;
+  parUsers?: string;
+  parDollars?: string;
+  p3Percent?: string;
+  p3Users?: string;
+  p3CaseRate?: string;
+  p3Dollars?: string;
 }
 
 /**
@@ -107,6 +114,146 @@ function replaceFragmentedMenoUsers(xml: string, value: string): { content: stri
  */
 function replaceFragmentedMenoDollars(xml: string, value: string): { content: string; replaced: boolean } {
   const pattern = '\\[(?:\\s*<[^>]*>\\s*)*m(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*n(?:\\s*<[^>]*>\\s*)*o(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*\\$(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [Par.%] placeholder
+ */
+function replaceFragmentedParPercent(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*P(?:\\s*<[^>]*>\\s*)*a(?:\\s*<[^>]*>\\s*)*r(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*%(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [Par.Users] placeholder
+ */
+function replaceFragmentedParUsers(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*P(?:\\s*<[^>]*>\\s*)*a(?:\\s*<[^>]*>\\s*)*r(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*U(?:\\s*<[^>]*>\\s*)*s(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*r(?:\\s*<[^>]*>\\s*)*s(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [Par.$] placeholder
+ */
+function replaceFragmentedParDollars(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*P(?:\\s*<[^>]*>\\s*)*a(?:\\s*<[^>]*>\\s*)*r(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*\\$(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [P3.%] placeholder
+ */
+function replaceFragmentedP3Percent(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*P(?:\\s*<[^>]*>\\s*)*3(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*%(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [P3.Users] placeholder
+ */
+function replaceFragmentedP3Users(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*P(?:\\s*<[^>]*>\\s*)*3(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*U(?:\\s*<[^>]*>\\s*)*s(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*r(?:\\s*<[^>]*>\\s*)*s(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [P3.CaseRate] placeholder
+ */
+function replaceFragmentedP3CaseRate(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*P(?:\\s*<[^>]*>\\s*)*3(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*C(?:\\s*<[^>]*>\\s*)*a(?:\\s*<[^>]*>\\s*)*s(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*R(?:\\s*<[^>]*>\\s*)*a(?:\\s*<[^>]*>\\s*)*t(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [P3.$] placeholder
+ */
+function replaceFragmentedP3Dollars(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*P(?:\\s*<[^>]*>\\s*)*3(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*\\$(?:\\s*<[^>]*>\\s*)*\\]';
   const regex = new RegExp(pattern, 'gi');
   const matches: Array<{ match: string; index: number }> = [];
   let match;
@@ -452,6 +599,139 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           const fragResult = replaceFragmentedMenoDollars(content, data.menoDollars);
           if (fragResult.replaced) {
             console.log(`✓ Replaced fragmented [meno.$] with ${data.menoDollars} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
+          }
+        }
+      }
+      
+      // Replace [Par.%] with parenting percentage
+      if (data.parPercent) {
+        let afterParPercent = simpleReplace(content, '[Par.%]', data.parPercent);
+        if (afterParPercent !== content) {
+          console.log(`✓ Replaced [Par.%] with ${data.parPercent} in ${filename}`);
+          content = afterParPercent;
+          modified = true;
+          replacementsMade++;
+        } else {
+          const fragResult = replaceFragmentedParPercent(content, data.parPercent);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [Par.%] with ${data.parPercent} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
+          }
+        }
+      }
+      
+      // Replace [Par.Users] with parenting users
+      if (data.parUsers) {
+        let afterParUsers = simpleReplace(content, '[Par.Users]', data.parUsers);
+        if (afterParUsers !== content) {
+          console.log(`✓ Replaced [Par.Users] with ${data.parUsers} in ${filename}`);
+          content = afterParUsers;
+          modified = true;
+          replacementsMade++;
+        } else {
+          const fragResult = replaceFragmentedParUsers(content, data.parUsers);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [Par.Users] with ${data.parUsers} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
+          }
+        }
+      }
+      
+      // Replace [Par.$] with parenting dollars
+      if (data.parDollars) {
+        let afterParDollars = simpleReplace(content, '[Par.$]', data.parDollars);
+        if (afterParDollars !== content) {
+          console.log(`✓ Replaced [Par.$] with ${data.parDollars} in ${filename}`);
+          content = afterParDollars;
+          modified = true;
+          replacementsMade++;
+        } else {
+          const fragResult = replaceFragmentedParDollars(content, data.parDollars);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [Par.$] with ${data.parDollars} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
+          }
+        }
+      }
+      
+      // Replace [P3.%] with P3 percentage
+      if (data.p3Percent) {
+        let afterP3Percent = simpleReplace(content, '[P3.%]', data.p3Percent);
+        if (afterP3Percent !== content) {
+          console.log(`✓ Replaced [P3.%] with ${data.p3Percent} in ${filename}`);
+          content = afterP3Percent;
+          modified = true;
+          replacementsMade++;
+        } else {
+          const fragResult = replaceFragmentedP3Percent(content, data.p3Percent);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [P3.%] with ${data.p3Percent} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
+          }
+        }
+      }
+      
+      // Replace [P3.Users] with P3 users
+      if (data.p3Users) {
+        let afterP3Users = simpleReplace(content, '[P3.Users]', data.p3Users);
+        if (afterP3Users !== content) {
+          console.log(`✓ Replaced [P3.Users] with ${data.p3Users} in ${filename}`);
+          content = afterP3Users;
+          modified = true;
+          replacementsMade++;
+        } else {
+          const fragResult = replaceFragmentedP3Users(content, data.p3Users);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [P3.Users] with ${data.p3Users} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
+          }
+        }
+      }
+      
+      // Replace [P3.CaseRate] with P3 case rate
+      if (data.p3CaseRate) {
+        let afterP3CaseRate = simpleReplace(content, '[P3.CaseRate]', data.p3CaseRate);
+        if (afterP3CaseRate !== content) {
+          console.log(`✓ Replaced [P3.CaseRate] with ${data.p3CaseRate} in ${filename}`);
+          content = afterP3CaseRate;
+          modified = true;
+          replacementsMade++;
+        } else {
+          const fragResult = replaceFragmentedP3CaseRate(content, data.p3CaseRate);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [P3.CaseRate] with ${data.p3CaseRate} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
+          }
+        }
+      }
+      
+      // Replace [P3.$] with P3 dollars
+      if (data.p3Dollars) {
+        let afterP3Dollars = simpleReplace(content, '[P3.$]', data.p3Dollars);
+        if (afterP3Dollars !== content) {
+          console.log(`✓ Replaced [P3.$] with ${data.p3Dollars} in ${filename}`);
+          content = afterP3Dollars;
+          modified = true;
+          replacementsMade++;
+        } else {
+          const fragResult = replaceFragmentedP3Dollars(content, data.p3Dollars);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [P3.$] with ${data.p3Dollars} in ${filename}`);
             content = fragResult.content;
             modified = true;
             replacementsMade++;

@@ -607,6 +607,15 @@ export default function ProspectForm() {
       const menoUsers = Math.round(eligMembers * 0.0056);
       const menoDollars = menoUsers * 250;
       
+      // Calculate parenting program values
+      const parUsers = Math.round(eligMembers * 0.0041);
+      const parDollars = parUsers * 600;
+      
+      // Calculate P3 program values
+      const p3Users = Math.round(eligMembers * 0.0025);
+      const p3CaseRate = 1250;
+      const p3Dollars = p3Users * p3CaseRate;
+      
       // Format PEPM as currency (e.g., .45 -> $0.45)
       const formattedPepm = fertilityPepm ? `$${parseFloat(fertilityPepm).toFixed(2)}` : '';
       
@@ -619,6 +628,13 @@ export default function ProspectForm() {
       console.log('  menoUsers (formatted):', menoUsers.toLocaleString());
       console.log('  menoDollars (formatted):', `$${menoDollars.toLocaleString()}`);
       console.log('  PEPM (formatted):', formattedPepm);
+      console.log('🔍 Parenting calculations:');
+      console.log('  parUsers:', parUsers);
+      console.log('  parDollars:', parDollars);
+      console.log('🔍 P3 calculations:');
+      console.log('  p3Users:', p3Users);
+      console.log('  p3CaseRate:', p3CaseRate);
+      console.log('  p3Dollars:', p3Dollars);
       
       await generatePPTX({
         client: prospectName,
@@ -634,6 +650,13 @@ export default function ProspectForm() {
         menoPercent: '0.56%',
         menoUsers: menoUsers.toLocaleString(),
         menoDollars: `$${menoDollars.toLocaleString()}`,
+        parPercent: '0.41%',
+        parUsers: parUsers.toLocaleString(),
+        parDollars: `$${parDollars.toLocaleString()}`,
+        p3Percent: '0.25%',
+        p3Users: p3Users.toLocaleString(),
+        p3CaseRate: `$${p3CaseRate.toLocaleString()}`,
+        p3Dollars: `$${p3Dollars.toLocaleString()}`,
       });
       setIsGeneratingPPTX(false);
 
