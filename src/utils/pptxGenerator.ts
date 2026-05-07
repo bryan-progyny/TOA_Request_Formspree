@@ -16,6 +16,9 @@ export interface PPTXData {
   feeType?: string;
   smartCyclesOption1?: string;
   smartCyclesOption2?: string;
+  menoPercent?: string;
+  menoUsers?: string;
+  menoDollars?: string;
 }
 
 /**
@@ -321,6 +324,39 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         if (afterSCA2 !== content) {
           console.log(`✓ Replaced [SCA2] with ${formattedSCA2} in ${filename}`);
           content = afterSCA2;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [meno.%] with menopause percentage
+      if (data.menoPercent) {
+        const afterMenoPercent = simpleReplace(content, '[meno.%]', data.menoPercent);
+        if (afterMenoPercent !== content) {
+          console.log(`✓ Replaced [meno.%] with ${data.menoPercent} in ${filename}`);
+          content = afterMenoPercent;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [Meno.Users] with calculated menopause users
+      if (data.menoUsers) {
+        const afterMenoUsers = simpleReplace(content, '[Meno.Users]', data.menoUsers);
+        if (afterMenoUsers !== content) {
+          console.log(`✓ Replaced [Meno.Users] with ${data.menoUsers} in ${filename}`);
+          content = afterMenoUsers;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [meno.$] with calculated menopause dollars
+      if (data.menoDollars) {
+        const afterMenoDollars = simpleReplace(content, '[meno.$]', data.menoDollars);
+        if (afterMenoDollars !== content) {
+          console.log(`✓ Replaced [meno.$] with ${data.menoDollars} in ${filename}`);
+          content = afterMenoDollars;
           modified = true;
           replacementsMade++;
         }

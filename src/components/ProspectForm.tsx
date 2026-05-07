@@ -601,6 +601,12 @@ export default function ProspectForm() {
       // Generate and download PowerPoint
       setIsGeneratingPPTX(true);
       setMessage({ type: 'info', text: 'Generating PowerPoint...' });
+      
+      // Calculate menopause values
+      const eligMembers = parseFloat(eligibleMembers || '0');
+      const menoUsers = Math.round(eligMembers * 0.0056);
+      const menoDollars = menoUsers * 250;
+      
       await generatePPTX({
         client: prospectName,
         eligibleEmployees: eligibleEmployees,
@@ -612,6 +618,9 @@ export default function ProspectForm() {
         feeType: feeType,
         smartCyclesOption1: smartCyclesOption1,
         smartCyclesOption2: smartCyclesOption2,
+        menoPercent: '0.56%',
+        menoUsers: menoUsers.toLocaleString(),
+        menoDollars: `$${menoDollars.toLocaleString()}`,
       });
       setIsGeneratingPPTX(false);
 
