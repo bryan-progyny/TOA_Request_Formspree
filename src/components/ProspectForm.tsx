@@ -607,6 +607,9 @@ export default function ProspectForm() {
       const menoUsers = Math.round(eligMembers * 0.0056);
       const menoDollars = menoUsers * 250;
       
+      // Format PEPM as currency (e.g., .45 -> $0.45)
+      const formattedPepm = fertilityPepm ? `$${parseFloat(fertilityPepm).toFixed(2)}` : '';
+      
       console.log('🔍 Menopause calculations:');
       console.log('  eligibleMembers:', eligibleMembers);
       console.log('  eligMembers (parsed):', eligMembers);
@@ -615,12 +618,13 @@ export default function ProspectForm() {
       console.log('  menoPercent:', '0.56%');
       console.log('  menoUsers (formatted):', menoUsers.toLocaleString());
       console.log('  menoDollars (formatted):', `$${menoDollars.toLocaleString()}`);
+      console.log('  PEPM (formatted):', formattedPepm);
       
       await generatePPTX({
         client: prospectName,
         eligibleEmployees: eligibleEmployees,
         eligibleMembers: eligibleMembers,
-        pepm: fertilityPepm,
+        pepm: formattedPepm,
         caseRate: fertilityCaseRate,
         adoptionLimit: adoptionCoverage,
         surrogacyLimit: surrogacyCoverage,

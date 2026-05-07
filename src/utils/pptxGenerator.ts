@@ -63,6 +63,15 @@ function replaceFragmentedEliMem(xml: string, value: string): { content: string;
 }
 
 export async function generatePPTX(data: PPTXData): Promise<void> {
+  console.log('\n📊 generatePPTX called with data:');
+  console.log('  client:', data.client);
+  console.log('  pepm:', data.pepm);
+  console.log('  menoPercent:', data.menoPercent);
+  console.log('  menoUsers:', data.menoUsers);
+  console.log('  menoDollars:', data.menoDollars);
+  console.log('  smartCyclesOption1:', data.smartCyclesOption1);
+  console.log('  smartCyclesOption2:', data.smartCyclesOption2);
+  
   try {
     console.log('=== PowerPoint Generation Started ===');
     console.log('Client name:', data.client);
@@ -331,34 +340,54 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
       
       // Replace [meno.%] with menopause percentage
       if (data.menoPercent) {
-        const afterMenoPercent = simpleReplace(content, '[meno.%]', data.menoPercent);
+        // Try simple replace first
+        let afterMenoPercent = simpleReplace(content, '[meno.%]', data.menoPercent);
         if (afterMenoPercent !== content) {
           console.log(`✓ Replaced [meno.%] with ${data.menoPercent} in ${filename}`);
           content = afterMenoPercent;
           modified = true;
           replacementsMade++;
+        } else {
+          // Try fragmented version (e.g., [meno.%] split by XML tags)
+          const fragmentedPattern = /\[meno\.%\]/gi;
+          const cleanedXml = content.replace(/<[^>]+>/g, '');
+          if (fragmentedPattern.test(cleanedXml)) {
+            console.log(`⚠️ Found fragmented [meno.%] in ${filename} - may need manual fix`);
+          }
         }
       }
       
       // Replace [meno.users] with calculated menopause users
       if (data.menoUsers) {
-        const afterMenoUsers = simpleReplace(content, '[meno.users]', data.menoUsers);
+        let afterMenoUsers = simpleReplace(content, '[meno.users]', data.menoUsers);
         if (afterMenoUsers !== content) {
           console.log(`✓ Replaced [meno.users] with ${data.menoUsers} in ${filename}`);
           content = afterMenoUsers;
           modified = true;
           replacementsMade++;
+        } else {
+          const fragmentedPattern = /\[meno\.users\]/gi;
+          const cleanedXml = content.replace(/<[^>]+>/g, '');
+          if (fragmentedPattern.test(cleanedXml)) {
+            console.log(`⚠️ Found fragmented [meno.users] in ${filename} - may need manual fix`);
+          }
         }
       }
       
       // Replace [meno.$] with calculated menopause dollars
       if (data.menoDollars) {
-        const afterMenoDollars = simpleReplace(content, '[meno.$]', data.menoDollars);
+        let afterMenoDollars = simpleReplace(content, '[meno.$]', data.menoDollars);
         if (afterMenoDollars !== content) {
           console.log(`✓ Replaced [meno.$] with ${data.menoDollars} in ${filename}`);
           content = afterMenoDollars;
           modified = true;
           replacementsMade++;
+        } else {
+          const fragmentedPattern = /\[meno\.\$\]/gi;
+          const cleanedXml = content.replace(/<[^>]+>/g, '');
+          if (fragmentedPattern.test(cleanedXml)) {
+            console.log(`⚠️ Found fragmented [meno.$] in ${filename} - may need manual fix`);
+          }
         }
       }
       
