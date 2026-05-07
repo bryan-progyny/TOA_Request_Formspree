@@ -523,6 +523,11 @@ export default function ProspectForm() {
         : '';
 
       const formData = {
+        // Formspree recipient email
+        _replyto: 'bailey.ryan@progyny.com',
+        recipient_email: 'bailey.ryan@progyny.com',
+        
+        // Form fields
         prospectName,
         prospectIndustry,
         accountLink,
@@ -569,10 +574,17 @@ export default function ProspectForm() {
         created_by: user?.id,
       };
 
+      // Add formatted JSON string for easy copying from email
+      const formDataWithJSON = {
+        ...formData,
+        formatted_json_data: JSON.stringify(formData, null, 2),
+        submission_timestamp: new Date().toISOString(),
+      };
+
       // Submit form data to Formspree
       setMessage({ type: 'info', text: 'Submitting your request...' });
       
-      const result = await submitToFormspree(formData);
+      const result = await submitToFormspree(formDataWithJSON);
       
       if (!result.ok) {
         throw new Error(result.error || 'Failed to submit form');
