@@ -600,7 +600,7 @@ export default function ProspectForm() {
 
       // Generate and download PowerPoint
       setIsGeneratingPPTX(true);
-      setMessage({ type: 'info', text: 'Generating PowerPoint...' });
+      setMessage({ type: 'info', text: 'Generating PowerPoint and packaging files...' });
       
       // Calculate menopause values
       const eligMembers = parseFloat(eligibleMembers || '0');
@@ -636,7 +636,7 @@ export default function ProspectForm() {
       console.log('  p3CaseRate:', p3CaseRate);
       console.log('  p3Dollars:', p3Dollars);
       
-      await generatePPTX({
+      const pptxResult = await generatePPTX({
         client: prospectName,
         eligibleEmployees: eligibleEmployees,
         eligibleMembers: eligibleMembers,
@@ -658,10 +658,88 @@ export default function ProspectForm() {
         p3CaseRate: `$${p3CaseRate.toLocaleString()}`,
         p3Dollars: `$${p3Dollars.toLocaleString()}`,
       });
+      
+      // Create JSON data for the form submission
+      const jsonData = {
+        prospectName,
+        prospectIndustry,
+        accountLink,
+        unionType,
+        eligibleEmployees,
+        eligibleMembers: effectiveMembers,
+        consultant,
+        channelPartnership,
+        healthplanPartnership,
+        needsCignaSlides,
+        scenariosCount,
+        smartCyclesOption1,
+        smartCyclesOption2,
+        rxCoverageType,
+        eggFreezingCoverage,
+        fertilityPepm,
+        fertilityCaseRate,
+        implementationFee,
+        currentFertilityBenefit,
+        fertilityAdministrator,
+        combinedMedicalRxBenefit,
+        currentFertilityMedicalLimit,
+        medicalLtmType,
+        currentFertilityRxLimit,
+        rxLtmType,
+        medicalBenefitDetails,
+        rxBenefitDetails,
+        currentElectiveEggFreezing,
+        liveBirths12mo,
+        currentBenefitPepm,
+        currentBenefitCaseFee,
+        includeNoBenefitColumn,
+        dollarMaxColumn,
+        competingAgainst,
+        adoptionSurrogacyEstimates,
+        adoptionCoverage,
+        adoptionFrequency,
+        surrogacyCoverage,
+        surrogacyFrequency,
+        notes,
+        dueDate,
+        rushReason,
+        distributionType,
+        healthPlans,
+        feeType,
+        submittedAt: new Date().toISOString(),
+      };
+      
+      // Create a zip file containing both PowerPoint and JSON
+      const PizZip = (await import('pizzip')).default;
+      const zip = new PizZip();
+      
+      // Add PowerPoint to zip
+      const pptxArrayBuffer = await pptxResult.blob.arrayBuffer();
+      zip.file(pptxResult.filename, pptxArrayBuffer);
+      
+      // Add JSON to zip
+      const jsonFilename = pptxResult.filename.replace('.pptx', '_data.json');
+      zip.file(jsonFilename, JSON.stringify(jsonData, null, 2));
+      
+      // Generate and download zip
+      const zipBlob = zip.generate({
+        type: 'blob',
+        mimeType: 'application/zip',
+      });
+      
+      const zipFilename = pptxResult.filename.replace('.pptx', '_Package.zip');
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(zipBlob);
+      link.download = zipFilename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href);
+      
       setIsGeneratingPPTX(false);
 
       // Success message
-      setMessage({ type: 'success', text: 'Request submitted successfully! PowerPoint downloaded.' });
+      setMessage({ type: 'success', text: 'Request submitted successfully! Package downloaded (PowerPoint + JSON data).' });
 
       setProspectName('');
       setProspectIndustry('');
@@ -916,10 +994,10 @@ export default function ProspectForm() {
                   <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
                   <div className="text-center">
                     <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
-                      Generating PowerPoint
+                      Generating Package
                     </h3>
                     <p className={`mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
-                      Please wait while we prepare your presentation...
+                      Creating PowerPoint and JSON data file...
                     </p>
                   </div>
                 </div>

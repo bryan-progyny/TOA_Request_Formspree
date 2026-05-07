@@ -269,7 +269,7 @@ function replaceFragmentedP3Dollars(xml: string, value: string): { content: stri
   return { content: result, replaced: true };
 }
 
-export async function generatePPTX(data: PPTXData): Promise<void> {
+export async function generatePPTX(data: PPTXData): Promise<{ blob: Blob; filename: string }> {
   console.log('\n📊 generatePPTX called with data:');
   console.log('  client:', data.client);
   console.log('  pepm:', data.pepm);
@@ -762,16 +762,12 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
       mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation',
     });
     
-    // Download with timestamp
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(output);
-    link.download = `TOA_Request_${data.client.replace(/[^a-zA-Z0-9]/g, '_')}_${now.toISOString().split('T')[0]}_${timeString}.pptx`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(link.href);
+    const filename = `TOA_Request_${data.client.replace(/[^a-zA-Z0-9]/g, '_')}_${now.toISOString().split('T')[0]}_${timeString}.pptx`;
     
-    console.log('✓ PowerPoint downloaded successfully');
+    console.log('✓ PowerPoint generated successfully');
+    
+    // Return the blob and filename instead of downloading
+    return { blob: output, filename };
   } catch (error) {
     console.error('❌ Error generating PowerPoint:', error);
     throw new Error(`Failed to generate PowerPoint: ${error instanceof Error ? error.message : String(error)}`);
