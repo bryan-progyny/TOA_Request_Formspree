@@ -82,6 +82,12 @@ export default function ProspectForm() {
     if (savedTheme) {
       setTheme(savedTheme);
     }
+    
+    // Check if user was previously authenticated
+    const wasAuthenticated = localStorage.getItem('toaFormAuthenticated');
+    if (wasAuthenticated === 'true') {
+      setAuthenticated(true);
+    }
   }, []);
 
   const toggleTheme = () => {
@@ -95,6 +101,8 @@ export default function ProspectForm() {
     if (passwordInput === correctPassword) {
       setAuthenticated(true);
       setPasswordError(false);
+      // Remember authentication in localStorage
+      localStorage.setItem('toaFormAuthenticated', 'true');
     } else {
       setPasswordError(true);
     }
