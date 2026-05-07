@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Plus, Trash2, Save, AlertTriangle, Sun, Moon } from 'lucide-react';
+import { Plus, Trash2, Save, AlertTriangle, Sun, Moon, Loader2, Download, Upload } from 'lucide-react';
 import AutocompleteInput from './AutocompleteInput';
 import { formatCurrency, formatPercentage, unformatCurrency, unformatPercentage, formatNumberWithCommas, unformatNumber } from '../utils/formatting';
 import { useAuth } from '../contexts/AuthContext';
@@ -76,6 +76,7 @@ export default function ProspectForm() {
   const [authenticated, setAuthenticated] = useState<boolean>(false);
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [passwordError, setPasswordError] = useState<boolean>(false);
+  const [isGeneratingPPTX, setIsGeneratingPPTX] = useState<boolean>(false);
   
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -110,6 +111,8 @@ export default function ProspectForm() {
 
   // Theme-aware styling helpers
   const labelClass = `block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
+  // Helper to add red asterisk for required fields
+  const requiredMark = <span className="text-red-500 ml-1">*</span>;
   const inputClass = `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm hover:shadow ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'}`;
   const selectClass = `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm hover:shadow ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-100' : 'bg-white border-slate-300 text-slate-900'}`;
   const textareaClass = `w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all resize-none ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'}`;
@@ -272,6 +275,163 @@ export default function ProspectForm() {
     return null;
   };
 
+  const calculateProgress = () => {
+    let filled = 0;
+    let total = 5; // Base required fields
+
+    if (prospectName.trim()) filled++;
+    if (prospectIndustry.trim()) filled++;
+    if (accountLink.trim()) filled++;
+    if (eligibleEmployees && parseInt(eligibleEmployees) > 0) filled++;
+    
+    // Cigna slides field is conditionally required
+    if (healthplanPartnership === 'Cigna') {
+      total++;
+      if (needsCignaSlides) filled++;
+    }
+
+    // Health plans validation
+    const hasValidPlans = healthPlans.every(plan => 
+      plan.healthPlanName.trim() &&
+      plan.deductibleIndividual &&
+      plan.deductibleFamily &&
+      plan.oopIndividual &&
+      plan.oopFamily &&
+      plan.coinsuranceIndividual &&
+      plan.coinsuranceFamily &&
+      (distributionType === 'unknown' || plan.employeeDistribution)
+    );
+    if (hasValidPlans) filled++;
+
+    return { filled, total, percentage: total > 0 ? Math.round((filled / total) * 100) : 0 };
+  };
+
+  const exportFormData = () => {
+    const formData = {
+      prospectName,
+      prospectIndustry,
+      accountLink,
+      unionType,
+      eligibleEmployees,
+      eligibleMembers,
+      consultant,
+      channelPartnership,
+      healthplanPartnership,
+      needsCignaSlides,
+      scenariosCount,
+      rxCoverageType,
+      eggFreezingCoverage,
+      fertilityPepm,
+      fertilityCaseRate,
+      implementationFee,
+      currentFertilityBenefit,
+      fertilityAdministrator,
+      combinedMedicalRxBenefit,
+      currentFertilityMedicalLimit,
+      medicalLtmType,
+      currentFertilityRxLimit,
+      rxLtmType,
+      medicalBenefitDetails,
+      rxBenefitDetails,
+      currentElectiveEggFreezing,
+      liveBirths12mo,
+      currentBenefitPepm,
+      currentBenefitCaseFee,
+      includeNoBenefitColumn,
+      dollarMaxColumn,
+      competingAgainst,
+      adoptionSurrogacyEstimates,
+      adoptionCoverage,
+      adoptionFrequency,
+      surrogacyCoverage,
+      surrogacyFrequency,
+      notes,
+      dueDate,
+      rushReason,
+      distributionType,
+      healthPlans,
+      feeType,
+    };
+
+    const blob = new Blob([JSON.stringify(formData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `TOA_Draft_${prospectName.replace(/[^a-zA-Z0-9]/g, '_') || 'Untitled'}_${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const importFormData = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = JSON.parse(e.target?.result as string);
+        
+        // Restore all form fields
+        setProspectName(data.prospectName || '');
+        setProspectIndustry(data.prospectIndustry || '');
+        setAccountLink(data.accountLink || '');
+        setUnionType(data.unionType || '');
+        setEligibleEmployees(data.eligibleEmployees || '');
+        setEligibleMembers(data.eligibleMembers || '');
+        setConsultant(data.consultant || '');
+        setChannelPartnership(data.channelPartnership || '');
+        setHealthplanPartnership(data.healthplanPartnership || '');
+        setNeedsCignaSlides(data.needsCignaSlides || '');
+        setScenariosCount(data.scenariosCount || '');
+        setRxCoverageType(data.rxCoverageType || '');
+        setEggFreezingCoverage(data.eggFreezingCoverage || '');
+        setFertilityPepm(data.fertilityPepm || '');
+        setFertilityCaseRate(data.fertilityCaseRate || '');
+        setImplementationFee(data.implementationFee || '');
+        setCurrentFertilityBenefit(data.currentFertilityBenefit || '');
+        setFertilityAdministrator(data.fertilityAdministrator || '');
+        setCombinedMedicalRxBenefit(data.combinedMedicalRxBenefit || '');
+        setCurrentFertilityMedicalLimit(data.currentFertilityMedicalLimit || '');
+        setMedicalLtmType(data.medicalLtmType || '');
+        setCurrentFertilityRxLimit(data.currentFertilityRxLimit || '');
+        setRxLtmType(data.rxLtmType || '');
+        setMedicalBenefitDetails(data.medicalBenefitDetails || '');
+        setRxBenefitDetails(data.rxBenefitDetails || '');
+        setCurrentElectiveEggFreezing(data.currentElectiveEggFreezing || '');
+        setLiveBirths12mo(data.liveBirths12mo || '');
+        setCurrentBenefitPepm(data.currentBenefitPepm || '');
+        setCurrentBenefitCaseFee(data.currentBenefitCaseFee || '');
+        setIncludeNoBenefitColumn(data.includeNoBenefitColumn || '');
+        setDollarMaxColumn(data.dollarMaxColumn || '');
+        setCompetingAgainst(data.competingAgainst || []);
+        setAdoptionSurrogacyEstimates(data.adoptionSurrogacyEstimates || '');
+        setAdoptionCoverage(data.adoptionCoverage || '');
+        setAdoptionFrequency(data.adoptionFrequency || '');
+        setSurrogacyCoverage(data.surrogacyCoverage || '');
+        setSurrogacyFrequency(data.surrogacyFrequency || '');
+        setNotes(data.notes || '');
+        setDueDate(data.dueDate || '');
+        setRushReason(data.rushReason || '');
+        setDistributionType(data.distributionType || 'percentage');
+        setFeeType(data.feeType || '');
+        
+        if (data.healthPlans && Array.isArray(data.healthPlans)) {
+          setHealthPlans(data.healthPlans);
+        }
+
+        setMessage({ type: 'success', text: 'Draft loaded successfully!' });
+      } catch (error) {
+        setMessage({ type: 'error', text: 'Failed to load draft. Invalid file format.' });
+      }
+    };
+    reader.readAsText(file);
+    
+    // Reset the input so the same file can be loaded again
+    event.target.value = '';
+  };
+
   const checkForDuplicates = async () => {
     // Duplicate checking disabled
     return false;
@@ -419,12 +579,14 @@ export default function ProspectForm() {
       }
 
       // Generate and download PowerPoint
+      setIsGeneratingPPTX(true);
       setMessage({ type: 'info', text: 'Generating PowerPoint...' });
       await generatePPTX({
         client: prospectName,
         eligibleEmployees: eligibleEmployees,
         eligibleMembers: eligibleMembers,
       });
+      setIsGeneratingPPTX(false);
 
       // Success message
       setMessage({ type: 'success', text: 'Request submitted successfully! PowerPoint downloaded.' });
@@ -493,6 +655,7 @@ export default function ProspectForm() {
       console.error('Error submitting form:', error);
       const errorMessage = formatSubmitError(error);
       setMessage({ type: 'error', text: errorMessage });
+      setIsGeneratingPPTX(false);
     } finally {
       setIsSubmitting(false);
     }
@@ -590,6 +753,51 @@ export default function ProspectForm() {
               {theme === 'light' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
             </button>
           </div>
+          
+          {/* Progress Indicator */}
+          {(() => {
+            const progress = calculateProgress();
+            return (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <span className={`text-sm font-medium ${theme === 'dark' ? 'text-slate-300' : 'text-slate-700'}`}>
+                    Form Progress: {progress.filled}/{progress.total} required fields
+                  </span>
+                  <span className={`text-sm font-semibold ${theme === 'dark' ? 'text-blue-400' : 'text-blue-600'}`}>
+                    {progress.percentage}%
+                  </span>
+                </div>
+                <div className={`w-full h-2 rounded-full overflow-hidden ${theme === 'dark' ? 'bg-slate-700' : 'bg-slate-200'}`}>
+                  <div 
+                    className="h-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-300"
+                    style={{ width: `${progress.percentage}%` }}
+                  />
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Export/Import Buttons */}
+          <div className="mt-4 flex gap-3">
+            <button
+              onClick={exportFormData}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${theme === 'dark' ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'}`}
+              title="Save current form data as JSON"
+            >
+              <Download className="w-4 h-4" />
+              Save Draft
+            </button>
+            <label className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium cursor-pointer transition-all ${theme === 'dark' ? 'bg-slate-700 hover:bg-slate-600 text-slate-200' : 'bg-white hover:bg-slate-50 text-slate-700 border border-slate-300'}`}>
+              <Upload className="w-4 h-4" />
+              Load Draft
+              <input
+                type="file"
+                accept=".json"
+                onChange={importFormData}
+                className="hidden"
+              />
+            </label>
+          </div>
         </div>
       </div>
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -624,6 +832,28 @@ export default function ProspectForm() {
           />
         )}
 
+        {/* Loading Overlay for PowerPoint Generation */}
+        {isGeneratingPPTX && (
+          <>
+            <div className="fixed inset-0 bg-black bg-opacity-60 z-50" />
+            <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+              <div className={`p-8 rounded-2xl shadow-2xl border ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+                <div className="flex flex-col items-center gap-4">
+                  <Loader2 className="w-16 h-16 text-blue-600 animate-spin" />
+                  <div className="text-center">
+                    <h3 className={`text-xl font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>
+                      Generating PowerPoint
+                    </h3>
+                    <p className={`mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+                      Please wait while we prepare your presentation...
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </>
+        )}
+
         <form 
           onSubmit={handleSubmit} 
           onKeyDown={(e) => {
@@ -652,7 +882,7 @@ export default function ProspectForm() {
 
                   <div>
                     <label className={labelClass}>
-                      Account Link *
+                      Account Link{requiredMark}
                     </label>
                     <input
                       type="text"
@@ -698,7 +928,7 @@ export default function ProspectForm() {
 
                   <div>
                     <label className={labelClass}>
-                      # of Eligible Employees (Medically Enrolled Employees) *
+                      # of Eligible Employees (Medically Enrolled Employees){requiredMark}
                     </label>
                     <input
                       type="text"
