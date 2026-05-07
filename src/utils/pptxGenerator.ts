@@ -62,6 +62,66 @@ function replaceFragmentedEliMem(xml: string, value: string): { content: string;
   return { content: result, replaced: true };
 }
 
+/**
+ * Replace fragmented [meno.%] placeholder
+ */
+function replaceFragmentedMenoPercent(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*m(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*n(?:\\s*<[^>]*>\\s*)*o(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*%(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [meno.users] placeholder
+ */
+function replaceFragmentedMenoUsers(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*m(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*n(?:\\s*<[^>]*>\\s*)*o(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*u(?:\\s*<[^>]*>\\s*)*s(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*r(?:\\s*<[^>]*>\\s*)*s(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
+/**
+ * Replace fragmented [meno.$] placeholder
+ */
+function replaceFragmentedMenoDollars(xml: string, value: string): { content: string; replaced: boolean } {
+  const pattern = '\\[(?:\\s*<[^>]*>\\s*)*m(?:\\s*<[^>]*>\\s*)*e(?:\\s*<[^>]*>\\s*)*n(?:\\s*<[^>]*>\\s*)*o(?:\\s*<[^>]*>\\s*)*\\.(?:\\s*<[^>]*>\\s*)*\\$(?:\\s*<[^>]*>\\s*)*\\]';
+  const regex = new RegExp(pattern, 'gi');
+  const matches: Array<{ match: string; index: number }> = [];
+  let match;
+  while ((match = regex.exec(xml)) !== null) {
+    matches.push({ match: match[0], index: match.index });
+  }
+  if (matches.length === 0) return { content: xml, replaced: false };
+  let result = xml;
+  for (let i = matches.length - 1; i >= 0; i--) {
+    const m = matches[i];
+    result = result.substring(0, m.index) + value + result.substring(m.index + m.match.length);
+  }
+  return { content: result, replaced: true };
+}
+
 export async function generatePPTX(data: PPTXData): Promise<void> {
   console.log('\n📊 generatePPTX called with data:');
   console.log('  client:', data.client);
@@ -348,11 +408,13 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           modified = true;
           replacementsMade++;
         } else {
-          // Try fragmented version (e.g., [meno.%] split by XML tags)
-          const fragmentedPattern = /\[meno\.%\]/gi;
-          const cleanedXml = content.replace(/<[^>]+>/g, '');
-          if (fragmentedPattern.test(cleanedXml)) {
-            console.log(`⚠️ Found fragmented [meno.%] in ${filename} - may need manual fix`);
+          // Try fragmented version
+          const fragResult = replaceFragmentedMenoPercent(content, data.menoPercent);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [meno.%] with ${data.menoPercent} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
           }
         }
       }
@@ -366,10 +428,13 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           modified = true;
           replacementsMade++;
         } else {
-          const fragmentedPattern = /\[meno\.users\]/gi;
-          const cleanedXml = content.replace(/<[^>]+>/g, '');
-          if (fragmentedPattern.test(cleanedXml)) {
-            console.log(`⚠️ Found fragmented [meno.users] in ${filename} - may need manual fix`);
+          // Try fragmented version
+          const fragResult = replaceFragmentedMenoUsers(content, data.menoUsers);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [meno.users] with ${data.menoUsers} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
           }
         }
       }
@@ -383,10 +448,13 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
           modified = true;
           replacementsMade++;
         } else {
-          const fragmentedPattern = /\[meno\.\$\]/gi;
-          const cleanedXml = content.replace(/<[^>]+>/g, '');
-          if (fragmentedPattern.test(cleanedXml)) {
-            console.log(`⚠️ Found fragmented [meno.$] in ${filename} - may need manual fix`);
+          // Try fragmented version
+          const fragResult = replaceFragmentedMenoDollars(content, data.menoDollars);
+          if (fragResult.replaced) {
+            console.log(`✓ Replaced fragmented [meno.$] with ${data.menoDollars} in ${filename}`);
+            content = fragResult.content;
+            modified = true;
+            replacementsMade++;
           }
         }
       }
