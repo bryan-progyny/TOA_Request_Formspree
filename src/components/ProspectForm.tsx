@@ -559,6 +559,10 @@ export default function ProspectForm() {
             </button>
           </div>
         </div>
+        <div className={`fixed bottom-0 left-0 right-0 py-3 text-center text-xs ${theme === 'dark' ? 'bg-slate-900/80 text-slate-400' : 'bg-white/80 text-slate-600'} backdrop-blur-sm border-t ${theme === 'dark' ? 'border-slate-700' : 'border-slate-200'}`}>
+          <p className="font-semibold">CONFIDENTIAL & INTERNAL USE ONLY</p>
+          <p className="mt-0.5">Property of MEA Team, Progyny</p>
+        </div>
       </div>
     );
   }
@@ -1698,6 +1702,10 @@ export default function ProspectForm() {
             </button>
           </div>
         </form>
+      </div>
+      <div className={`py-4 text-center text-xs ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>
+        <p className="font-semibold">CONFIDENTIAL & INTERNAL USE ONLY</p>
+        <p className="mt-0.5">Property of MEA Team, Progyny</p>
       </div>
     </div>
   );
