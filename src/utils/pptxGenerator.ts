@@ -14,6 +14,8 @@ export interface PPTXData {
   adoptionLimit?: string;
   surrogacyLimit?: string;
   feeType?: string;
+  smartCyclesOption1?: string;
+  smartCyclesOption2?: string;
 }
 
 /**
@@ -291,6 +293,34 @@ export async function generatePPTX(data: PPTXData): Promise<void> {
         if (afterFeeType !== content) {
           console.log(`✓ Replaced [case.or.admin] with ${data.feeType} in ${filename}`);
           content = afterFeeType;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [SCA] with smart cycles option 1 (formatted)
+      if (data.smartCyclesOption1) {
+        const formattedSCA = data.smartCyclesOption1 === '1' 
+          ? '1 Smart Cycle' 
+          : `${data.smartCyclesOption1} Smart Cycles`;
+        const afterSCA = simpleReplace(content, '[SCA]', formattedSCA);
+        if (afterSCA !== content) {
+          console.log(`✓ Replaced [SCA] with ${formattedSCA} in ${filename}`);
+          content = afterSCA;
+          modified = true;
+          replacementsMade++;
+        }
+      }
+      
+      // Replace [SCA2] with smart cycles option 2 (formatted)
+      if (data.smartCyclesOption2) {
+        const formattedSCA2 = data.smartCyclesOption2 === '1' 
+          ? '1 Smart Cycle' 
+          : `${data.smartCyclesOption2} Smart Cycles`;
+        const afterSCA2 = simpleReplace(content, '[SCA2]', formattedSCA2);
+        if (afterSCA2 !== content) {
+          console.log(`✓ Replaced [SCA2] with ${formattedSCA2} in ${filename}`);
+          content = afterSCA2;
           modified = true;
           replacementsMade++;
         }

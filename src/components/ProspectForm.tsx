@@ -610,6 +610,8 @@ export default function ProspectForm() {
         adoptionLimit: adoptionCoverage,
         surrogacyLimit: surrogacyCoverage,
         feeType: feeType,
+        smartCyclesOption1: smartCyclesOption1,
+        smartCyclesOption2: smartCyclesOption2,
       });
       setIsGeneratingPPTX(false);
 
