@@ -35,6 +35,8 @@ export default function ProspectForm() {
   const [healthplanPartnership, setHealthplanPartnership] = useState('');
   const [needsCignaSlides, setNeedsCignaSlides] = useState('');
   const [scenariosCount, setScenariosCount] = useState('');
+  const [smartCyclesOption1, setSmartCyclesOption1] = useState('');
+  const [smartCyclesOption2, setSmartCyclesOption2] = useState('');
   const [rxCoverageType, setRxCoverageType] = useState('');
   const [eggFreezingCoverage, setEggFreezingCoverage] = useState('');
   const [fertilityPepm, setFertilityPepm] = useState('');
@@ -319,6 +321,8 @@ export default function ProspectForm() {
       healthplanPartnership,
       needsCignaSlides,
       scenariosCount,
+      smartCyclesOption1,
+      smartCyclesOption2,
       rxCoverageType,
       eggFreezingCoverage,
       fertilityPepm,
@@ -385,6 +389,8 @@ export default function ProspectForm() {
         setHealthplanPartnership(data.healthplanPartnership || '');
         setNeedsCignaSlides(data.needsCignaSlides || '');
         setScenariosCount(data.scenariosCount || '');
+        setSmartCyclesOption1(data.smartCyclesOption1 || '');
+        setSmartCyclesOption2(data.smartCyclesOption2 || '');
         setRxCoverageType(data.rxCoverageType || '');
         setEggFreezingCoverage(data.eggFreezingCoverage || '');
         setFertilityPepm(data.fertilityPepm || '');
@@ -539,6 +545,8 @@ export default function ProspectForm() {
         healthplanPartnership,
         needsCignaSlides,
         scenariosCount,
+        smartCyclesOption1,
+        smartCyclesOption2,
         rxCoverageType,
         eggFreezingCoverage,
         fertilityPepm,
@@ -619,6 +627,8 @@ export default function ProspectForm() {
       setHealthplanPartnership('');
       setNeedsCignaSlides('');
       setScenariosCount('');
+      setSmartCyclesOption1('');
+      setSmartCyclesOption2('');
       setRxCoverageType('');
       setEggFreezingCoverage('');
       setFertilityPepm('');
@@ -1365,7 +1375,49 @@ export default function ProspectForm() {
                   </select>
                 </div>
 
+                {/* Conditional Smart Cycles for Option 1 */}
+                {(scenariosCount === '1' || scenariosCount === '2') && (
+                  <div>
+                    <label className={labelClass}>
+                      How many smart cycles for Option 1?
+                    </label>
+                    <select
+                      value={smartCyclesOption1}
+                      onChange={(e) => setSmartCyclesOption1(e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="6">6</option>
+                    </select>
+                  </div>
+                )}
 
+                {/* Conditional Smart Cycles for Option 2 */}
+                {scenariosCount === '2' && (
+                  <div>
+                    <label className={labelClass}>
+                      How many smart cycles for Option 2?
+                    </label>
+                    <select
+                      value={smartCyclesOption2}
+                      onChange={(e) => setSmartCyclesOption2(e.target.value)}
+                      className={selectClass}
+                    >
+                      <option value="">Select...</option>
+                      <option value="1">1</option>
+                      <option value="2">2</option>
+                      <option value="3">3</option>
+                      <option value="4">4</option>
+                      <option value="5">5</option>
+                      <option value="6">6</option>
+                    </select>
+                  </div>
+                )}
 
                 <div>
                   <label className={labelClass}>
