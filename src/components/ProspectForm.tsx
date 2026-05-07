@@ -73,6 +73,9 @@ export default function ProspectForm() {
   const [confirmSubmit, setConfirmSubmit] = useState<boolean>(false);
   const [distributionError, setDistributionError] = useState<boolean>(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [authenticated, setAuthenticated] = useState<boolean>(false);
+  const [passwordInput, setPasswordInput] = useState<string>('');
+  const [passwordError, setPasswordError] = useState<boolean>(false);
   
   useEffect(() => {
     const savedTheme = localStorage.getItem('theme') as 'light' | 'dark' | null;
@@ -86,6 +89,78 @@ export default function ProspectForm() {
     setTheme(newTheme);
     localStorage.setItem('theme', newTheme);
   };
+
+  const handlePasswordSubmit = () => {
+    const correctPassword = 'Pr0gyny123!@';
+    if (passwordInput === correctPassword) {
+      setAuthenticated(true);
+      setPasswordError(false);
+    } else {
+      setPasswordError(true);
+    }
+  };
+
+  // Show login screen if not authenticated
+  if (!authenticated) {
+    return (
+      <div className={`min-h-screen flex items-center justify-center ${theme === 'dark' ? 'bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900' : 'bg-gradient-to-br from-slate-100 via-slate-50 to-blue-100'}`}>
+        <div className="absolute top-6 right-6">
+          <button
+            onClick={toggleTheme}
+            className={`p-3 rounded-xl transition-all shadow-lg ${theme === 'dark' ? 'bg-slate-700 hover:bg-slate-600 text-yellow-300' : 'bg-slate-200 hover:bg-slate-300 text-slate-700'}`}
+            title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+          >
+            {theme === 'light' ? <Moon className="w-6 h-6" /> : <Sun className="w-6 h-6" />}
+          </button>
+        </div>
+        <div className={`max-w-md w-full mx-4 p-8 rounded-2xl shadow-2xl border ${theme === 'dark' ? 'bg-slate-800 border-slate-700' : 'bg-white border-slate-200'}`}>
+          <div className="text-center mb-8">
+            <img src={`${import.meta.env.BASE_URL}mea-logo.png`} alt="MEA Logo" className="h-20 w-auto mx-auto mb-4" />
+            <div className={`w-16 h-16 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg mx-auto mb-4`}>
+              <Save className="w-8 h-8 text-white" />
+            </div>
+            <h2 className={`text-2xl font-bold ${theme === 'dark' ? 'text-slate-100' : 'text-slate-900'}`}>TOA Request Form</h2>
+            <p className={`mt-2 ${theme === 'dark' ? 'text-slate-400' : 'text-slate-600'}`}>Please enter the password to access the form</p>
+          </div>
+          <div className="space-y-4">
+            <div>
+              <label className={`block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`}>
+                Password
+              </label>
+              <input
+                type="password"
+                value={passwordInput}
+                onChange={(e) => {
+                  setPasswordInput(e.target.value);
+                  setPasswordError(false);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handlePasswordSubmit();
+                  }
+                }}
+                className={`w-full px-4 py-3 border rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all shadow-sm ${theme === 'dark' ? 'bg-slate-700 border-slate-600 text-slate-100 placeholder-slate-400' : 'bg-white border-slate-300 text-slate-900 placeholder-slate-500'} ${passwordError ? 'border-red-500 ring-2 ring-red-500' : ''}`}
+                placeholder="Enter password"
+                autoFocus
+              />
+              {passwordError && (
+                <p className="text-red-500 text-sm mt-2 flex items-center gap-1">
+                  <AlertTriangle className="w-4 h-4" />
+                  Incorrect password. Please try again.
+                </p>
+              )}
+            </div>
+            <button
+              onClick={handlePasswordSubmit}
+              className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 text-white py-3 rounded-xl font-semibold hover:from-blue-700 hover:to-indigo-700 transition-all shadow-lg hover:shadow-xl"
+            >
+              Access Form
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Theme-aware styling helpers
   const labelClass = `block text-sm font-semibold mb-2 ${theme === 'dark' ? 'text-slate-200' : 'text-slate-800'}`;
