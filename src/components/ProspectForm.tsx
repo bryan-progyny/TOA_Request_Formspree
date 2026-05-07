@@ -607,6 +607,15 @@ export default function ProspectForm() {
       const menoUsers = Math.round(eligMembers * 0.0056);
       const menoDollars = menoUsers * 250;
       
+      console.log('🔍 Menopause calculations:');
+      console.log('  eligibleMembers:', eligibleMembers);
+      console.log('  eligMembers (parsed):', eligMembers);
+      console.log('  menoUsers:', menoUsers);
+      console.log('  menoDollars:', menoDollars);
+      console.log('  menoPercent:', '0.56%');
+      console.log('  menoUsers (formatted):', menoUsers.toLocaleString());
+      console.log('  menoDollars (formatted):', `$${menoDollars.toLocaleString()}`);
+      
       await generatePPTX({
         client: prospectName,
         eligibleEmployees: eligibleEmployees,
