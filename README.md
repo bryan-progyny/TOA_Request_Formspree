@@ -1,6 +1,6 @@
 # TOA Request Form
 
-A modern web application for creating and managing Total Offer Analysis (TOA) requests for prospective clients. This form streamlines the collection of health plan and fertility benefit information, enabling efficient proposal generation.
+A modern web application for creating and managing Targeted Outcomes Analysis (TOA) requests for prospective clients. This form streamlines the collection of health plan and fertility benefit information, enabling efficient proposal generation.
 
 ## Features
 
